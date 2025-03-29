@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dragon Flight - Kodex</title>
   <style>
-    /* Basic reset and safe-area adjustments */
+    /* Basic reset and safe-area adjustments with fallback values */
     html, body {
       margin: 0;
       padding: 0;
@@ -15,9 +15,8 @@
     }
     
     body {
-      /* Ensure content doesn't get overlapped by the notch on iOS */
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
       font-family: Arial, sans-serif;
       overflow: hidden;
       background-color: #71C5CF;
@@ -27,7 +26,7 @@
       user-select: none;
     }
     
-    /* Game container covers the full viewport height */
+    /* Game container covers full viewport height */
     #game-container {
       position: relative;
       width: 100%;
@@ -43,10 +42,10 @@
       touch-action: none;
     }
     
-    /* Adjust top UI elements using safe area insets */
+    /* Top UI elements – using fallback for safe-area insets */
     #score-display {
       position: absolute;
-      top: calc(20px + env(safe-area-inset-top));
+      top: calc(20px + env(safe-area-inset-top, 0px));
       width: 100%;
       text-align: center;
       font-size: 40px;
@@ -58,8 +57,8 @@
     
     #leaderboard {
       position: absolute;
-      top: calc(20px + env(safe-area-inset-top));
-      left: calc(20px + env(safe-area-inset-left));
+      top: calc(20px + env(safe-area-inset-top, 0px));
+      left: calc(20px + env(safe-area-inset-left, 0px));
       z-index: 40;
       background: rgba(0,0,0,0.5);
       color: white;
@@ -129,11 +128,11 @@
       font-size: 20px;
     }
     
-    /* Adjust pause button to account for safe area */
+    /* Adjust pause button to account for safe area with fallback */
     #pause-button {
       position: absolute;
-      top: calc(20px + env(safe-area-inset-top));
-      right: calc(20px + env(safe-area-inset-right));
+      top: calc(20px + env(safe-area-inset-top, 0px));
+      right: calc(20px + env(safe-area-inset-right, 0px));
       z-index: 40;
       background: rgba(0,0,0,0.5);
       padding: 10px;
@@ -145,7 +144,7 @@
     /* Bottom controls container using safe area for the bottom */
     #bottom-controls {
       position: absolute;
-      bottom: calc(10px + env(safe-area-inset-bottom));
+      bottom: calc(10px + env(safe-area-inset-bottom, 0px));
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
