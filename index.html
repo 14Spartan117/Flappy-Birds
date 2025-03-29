@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Use viewport-fit=cover with fallback for safe areas -->
+  <!-- Use viewport-fit=cover with safe area fallback -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dragon Flight - Kodex</title>
   <style>
@@ -43,7 +43,7 @@
       z-index: 0;
     }
     
-    /* Top UI elements using safe area insets with fallback */
+    /* Top UI elements using safe-area with fallback */
     #score-display {
       position: absolute;
       top: calc(20px + env(safe-area-inset-top, 0px));
@@ -69,17 +69,18 @@
       max-width: 200px;
     }
     
+    /* Reduced start message size and padding */
     #start-message {
       position: absolute;
       top: 30%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 48px;
+      font-size: 28px;  /* reduced from 48px */
       font-weight: bold;
       color: white;
       background-color: rgba(0,0,0,0.5);
-      padding: 20px;
+      padding: 10px;   /* reduced padding */
       border-radius: 10px;
       z-index: 20;
     }
@@ -96,7 +97,7 @@
       z-index: 50;
     }
     
-    /* Game over sign */
+    /* Game over sign remains at 40% */
     #game-over {
       position: absolute;
       top: 40%;
@@ -129,7 +130,7 @@
       font-size: 20px;
     }
     
-    /* Pause button using safe area insets */
+    /* Pause button using safe-area insets with fallback */
     #pause-button {
       position: absolute;
       top: calc(20px + env(safe-area-inset-top, 0px));
@@ -142,10 +143,10 @@
       cursor: pointer;
     }
     
-    /* Bottom controls container with a semi-transparent dark background */
+    /* Bottom controls container – moved up and given a dark semi-transparent background */
     #bottom-controls {
       position: absolute;
-      bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* increased from 10px to 60px */
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
@@ -154,13 +155,13 @@
       justify-content: center;
       align-items: flex-end;
       max-width: 100%;
-      gap: 20px;
-      padding: 10px;
+      gap: 10px; /* reduced gap */
+      padding: 5px;
       background: rgba(0, 0, 0, 0.5);
       border-radius: 5px;
     }
     
-    /* Styling for each selection block */
+    /* Bottom selection groups – reduced text and button sizes */
     #mode-selection, #difficulty-selection, #skin-selection {
       text-align: center;
       color: white;
@@ -169,8 +170,8 @@
     #mode-selection h2,
     #difficulty-selection h2,
     #skin-selection h2 {
-      font-size: 20px;
-      margin-bottom: 5px;
+      font-size: 14px;  /* reduced from 20px */
+      margin-bottom: 3px;
       text-shadow: 1px 1px 2px #000;
     }
     
@@ -179,14 +180,14 @@
     .skin-buttons {
       display: flex;
       justify-content: center;
-      gap: 10px;
+      gap: 5px;  /* reduced gap */
     }
     
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 5px 10px;  /* reduced padding */
+      font-size: 12px;    /* reduced font size */
       border: none;
       border-radius: 5px;
       cursor: pointer;
