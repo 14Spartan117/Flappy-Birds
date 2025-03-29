@@ -76,11 +76,11 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 28px;  /* reduced from 48px */
+      font-size: 28px;
       font-weight: bold;
       color: white;
       background-color: rgba(0,0,0,0.5);
-      padding: 10px;   /* reduced padding */
+      padding: 10px;
       border-radius: 10px;
       z-index: 20;
     }
@@ -143,10 +143,10 @@
       cursor: pointer;
     }
     
-    /* Bottom controls container – moved up and given a dark semi-transparent background */
+    /* Bottom controls container – moved up and with max-width to clear edges */
     #bottom-controls {
       position: absolute;
-      bottom: calc(60px + env(safe-area-inset-bottom, 0px)); /* increased from 10px to 60px */
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
@@ -154,8 +154,8 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: flex-end;
-      max-width: 100%;
-      gap: 10px; /* reduced gap */
+      max-width: calc(100% - 20px);
+      gap: 10px;
       padding: 5px;
       background: rgba(0, 0, 0, 0.5);
       border-radius: 5px;
@@ -170,7 +170,7 @@
     #mode-selection h2,
     #difficulty-selection h2,
     #skin-selection h2 {
-      font-size: 14px;  /* reduced from 20px */
+      font-size: 14px;
       margin-bottom: 3px;
       text-shadow: 1px 1px 2px #000;
     }
@@ -180,14 +180,14 @@
     .skin-buttons {
       display: flex;
       justify-content: center;
-      gap: 5px;  /* reduced gap */
+      gap: 5px;
     }
     
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
-      padding: 5px 10px;  /* reduced padding */
-      font-size: 12px;    /* reduced font size */
+      padding: 5px 10px;
+      font-size: 12px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
