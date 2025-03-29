@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Use viewport-fit=cover so the content can extend into the safe area -->
+  <!-- Use viewport-fit=cover with fallback for safe areas -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dragon Flight - Kodex</title>
   <style>
-    /* Basic reset and safe-area adjustments with fallback values */
+    /* Basic reset with safe-area fallback */
     html, body {
       margin: 0;
       padding: 0;
@@ -26,7 +26,7 @@
       user-select: none;
     }
     
-    /* Game container covers full viewport height */
+    /* Game container covers full viewport */
     #game-container {
       position: relative;
       width: 100%;
@@ -34,15 +34,16 @@
       overflow: hidden;
     }
     
-    /* Make canvas fill the container */
+    /* Canvas fills container */
     canvas {
       display: block;
       width: 100%;
       height: 100%;
       touch-action: none;
+      z-index: 0;
     }
     
-    /* Top UI elements – using fallback for safe-area insets */
+    /* Top UI elements using safe area insets with fallback */
     #score-display {
       position: absolute;
       top: calc(20px + env(safe-area-inset-top, 0px));
@@ -95,7 +96,7 @@
       z-index: 50;
     }
     
-    /* Move game over sign higher */
+    /* Game over sign */
     #game-over {
       position: absolute;
       top: 40%;
@@ -128,7 +129,7 @@
       font-size: 20px;
     }
     
-    /* Adjust pause button to account for safe area with fallback */
+    /* Pause button using safe area insets */
     #pause-button {
       position: absolute;
       top: calc(20px + env(safe-area-inset-top, 0px));
@@ -141,7 +142,7 @@
       cursor: pointer;
     }
     
-    /* Bottom controls container using safe area for the bottom */
+    /* Bottom controls container with a semi-transparent dark background */
     #bottom-controls {
       position: absolute;
       bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -154,6 +155,9 @@
       align-items: flex-end;
       max-width: 100%;
       gap: 20px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 5px;
     }
     
     /* Styling for each selection block */
@@ -258,7 +262,7 @@
       const pauseButton = document.getElementById('pause-button');
       const leaderboardList = document.getElementById('leaderboard-list');
       const achievementNotification = document.getElementById('achievement-notification');
-
+  
       // Mode selection buttons
       const classicBtn = document.getElementById('classic-btn');
       const challengeBtn = document.getElementById('challenge-btn');
