@@ -13,7 +13,6 @@
       height: 100%;
       box-sizing: border-box;
     }
-    
     body {
       padding-top: env(safe-area-inset-top, 0px);
       padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -25,7 +24,6 @@
       -webkit-user-select: none;
       user-select: none;
     }
-    
     /* Game container covers full viewport */
     #game-container {
       position: relative;
@@ -33,7 +31,6 @@
       height: 100vh;
       overflow: hidden;
     }
-    
     /* Canvas fills container */
     canvas {
       display: block;
@@ -42,7 +39,6 @@
       touch-action: none;
       z-index: 0;
     }
-    
     /* Top UI elements using safe-area with fallback */
     #score-display {
       position: absolute;
@@ -55,7 +51,6 @@
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
       z-index: 10;
     }
-    
     #leaderboard {
       position: absolute;
       top: calc(20px + env(safe-area-inset-top, 0px));
@@ -68,7 +63,6 @@
       font-size: 16px;
       max-width: 200px;
     }
-    
     /* Reduced start message size and padding */
     #start-message {
       position: absolute;
@@ -84,7 +78,6 @@
       border-radius: 10px;
       z-index: 20;
     }
-    
     #achievement-notification {
       position: absolute;
       top: 40%;
@@ -96,7 +89,6 @@
       display: none;
       z-index: 50;
     }
-    
     /* Game over sign remains at 40% */
     #game-over {
       position: absolute;
@@ -113,7 +105,6 @@
       display: none;
       z-index: 30;
     }
-    
     #game-over button {
       margin-top: 10px;
       padding: 10px 20px;
@@ -124,12 +115,10 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    
     #high-score {
       margin-top: 10px;
       font-size: 20px;
     }
-    
     /* Pause button using safe-area insets with fallback */
     #pause-button {
       position: absolute;
@@ -142,7 +131,6 @@
       color: white;
       cursor: pointer;
     }
-    
     /* Bottom controls container – moved up */
     #bottom-controls {
       position: absolute;
@@ -160,13 +148,11 @@
       background: rgba(0, 0, 0, 0.5);
       border-radius: 5px;
     }
-    
     /* Bottom selection groups – reduced text and button sizes */
     #mode-selection, #difficulty-selection, #skin-selection {
       text-align: center;
       color: white;
     }
-    
     #mode-selection h2,
     #difficulty-selection h2,
     #skin-selection h2 {
@@ -174,7 +160,6 @@
       margin-bottom: 3px;
       text-shadow: 1px 1px 2px #000;
     }
-    
     .mode-buttons,
     .difficulty-buttons,
     .skin-buttons {
@@ -182,7 +167,6 @@
       justify-content: center;
       gap: 5px;
     }
-    
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
@@ -193,7 +177,6 @@
       cursor: pointer;
       background-color: #ccc;
     }
-    
     .mode-btn.selected,
     .difficulty-btn.selected,
     .skin-btn.selected {
@@ -532,8 +515,8 @@
           p.x += p.vx;
           p.y += p.vy;
           p.alpha -= 0.02;
-          // Remove particle when nearly transparent
-          if (p.alpha <= 0.1) {
+          // Remove particle if nearly transparent or if it is off-screen
+          if (p.alpha <= 0.05 || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
             particles.splice(i, 1);
           }
         }
