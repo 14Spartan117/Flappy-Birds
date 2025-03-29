@@ -515,8 +515,14 @@
           p.x += p.vx;
           p.y += p.vy;
           p.alpha -= 0.02;
-          // Remove particle if nearly transparent or if it is off-screen
-          if (p.alpha <= 0.05 || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+          // Remove particle if nearly transparent or completely off-screen (using its radius)
+          if (
+            p.alpha <= 0.05 ||
+            (p.x + p.radius < 0) ||
+            (p.x - p.radius > canvas.width) ||
+            (p.y + p.radius < 0) ||
+            (p.y - p.radius > canvas.height)
+          ) {
             particles.splice(i, 1);
           }
         }
