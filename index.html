@@ -143,10 +143,10 @@
       cursor: pointer;
     }
     
-    /* Bottom controls container – moved up and with max-width to clear edges */
+    /* Bottom controls container – moved up by increasing the bottom offset */
     #bottom-controls {
       position: absolute;
-      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(150px + env(safe-area-inset-bottom, 0px));
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
