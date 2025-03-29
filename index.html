@@ -143,7 +143,7 @@
       cursor: pointer;
     }
     
-    /* Bottom controls container – moved up by increasing the bottom offset */
+    /* Bottom controls container – moved up */
     #bottom-controls {
       position: absolute;
       bottom: calc(150px + env(safe-area-inset-bottom, 0px));
@@ -532,7 +532,8 @@
           p.x += p.vx;
           p.y += p.vy;
           p.alpha -= 0.02;
-          if (p.alpha <= 0) {
+          // Remove particle when nearly transparent
+          if (p.alpha <= 0.1) {
             particles.splice(i, 1);
           }
         }
