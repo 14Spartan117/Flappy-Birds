@@ -530,6 +530,7 @@
       
       function drawParticles() {
         particles.forEach(p => {
+          if (p.alpha < 0.05) return;
           ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
