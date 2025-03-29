@@ -218,6 +218,7 @@
           <button id="red-skin-btn" class="skin-btn selected">Red</button>
           <button id="blue-skin-btn" class="skin-btn">Blue</button>
           <button id="green-skin-btn" class="skin-btn">Green</button>
+          <button id="pink-skin-btn" class="skin-btn">Pink</button>
         </div>
       </div>
     </div>
@@ -250,17 +251,18 @@
       // Mode selection buttons
       const classicBtn = document.getElementById('classic-btn');
       const challengeBtn = document.getElementById('challenge-btn');
-      
+  
       // Difficulty selection buttons
       const easyBtn = document.getElementById('easy-btn');
       const mediumBtn = document.getElementById('medium-btn');
       const hardBtn = document.getElementById('hard-btn');
-      
-      // Skin selection buttons
+  
+      // Skin selection buttons, including new pink skin
       const redSkinBtn = document.getElementById('red-skin-btn');
       const blueSkinBtn = document.getElementById('blue-skin-btn');
       const greenSkinBtn = document.getElementById('green-skin-btn');
-      
+      const pinkSkinBtn = document.getElementById('pink-skin-btn');
+  
       // Set canvas size
       function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -268,43 +270,43 @@
       }
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
-      
+  
       // Game variables
       const gravity = 0.5;
       const jumpForce = -10;
       const basePipeWidth = 80;
-      
+  
       // Difficulty settings
       const difficulties = {
         Easy: { pipeGap: 250, pipeSpawnRate: 2200 },
         Medium: { pipeGap: 200, pipeSpawnRate: 1800 },
         Hard: { pipeGap: 150, pipeSpawnRate: 1200 }
       };
-      
+  
       let selectedDifficulty = difficulties.Medium;
-      
+  
       // Default game mode and skin
       let gameMode = "Classic"; // or "Challenge"
       let selectedSkin = "red";
-      
+  
       // Game parameters (will be recalculated)
       let pipeGap = selectedDifficulty.pipeGap;
       let pipeSpawnRate = selectedDifficulty.pipeSpawnRate;
       let pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
-      
+  
       // High score
       let highScore = localStorage.getItem('highScore') || 0;
       highScoreDisplay.innerText = `High Score: ${highScore}`;
-      
+  
       let score = 0;
       let gameStarted = false;
       let gameRunning = false;
       let lastPipeTime = 0;
       let paused = false;
-      
+  
       // Particle effects array
       const particles = [];
-      
+  
       // Achievements
       const achievements = [
         { score: 1, message: "First Flap!" },
@@ -314,7 +316,7 @@
         { score: 100, message: "Unstoppable! 100 points!" }
       ];
       const unlockedAchievements = new Set();
-      
+  
       function showAchievement(message) {
         achievementNotification.innerText = message;
         achievementNotification.style.display = 'block';
@@ -322,7 +324,7 @@
           achievementNotification.style.display = 'none';
         }, 2000);
       }
-      
+  
       function checkAchievements(currentScore) {
         achievements.forEach(ach => {
           if (currentScore >= ach.score && !unlockedAchievements.has(ach.score)) {
@@ -331,14 +333,15 @@
           }
         });
       }
-      
-      // Skins definitions for customization
+  
+      // Skins definitions for customization, including a new pink skin
       const skins = {
         red: { body: '#CC0000', wing: '#AA0000', head: '#CC0000', snout: '#AA0000', eye: '#FFFF00' },
         blue: { body: '#0000CC', wing: '#0000AA', head: '#0000CC', snout: '#000099', eye: '#FFFFFF' },
-        green: { body: '#00CC00', wing: '#00AA00', head: '#00CC00', snout: '#009900', eye: '#FFFF00' }
+        green: { body: '#00CC00', wing: '#00AA00', head: '#00CC00', snout: '#009900', eye: '#FFFF00' },
+        pink: { body: '#FF69B4', wing: '#FF1493', head: '#FF69B4', snout: '#FF1493', eye: '#FFFFFF' }
       };
-      
+  
       // Dragon object (formerly bird)
       const bird = {
         x: canvas.width / 4,
@@ -414,7 +417,7 @@
           this.velocity = jumpForce;
         }
       };
-      
+  
       function Pipe(x) {
         this.x = x;
         this.width = basePipeWidth;
@@ -422,7 +425,7 @@
         const minGapY = pipeGap + 100;
         const maxGapY = canvas.height - pipeGap - 200;
         this.gapY = Math.random() * (maxGapY - minGapY) + minGapY;
-        
+  
         this.draw = function() {
           ctx.fillStyle = '#75B91A';
           ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
@@ -431,7 +434,7 @@
           ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
           ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
         };
-        
+  
         this.update = function() {
           this.x -= pipeSpeed;
           if (!this.scored && this.x + this.width < bird.x) {
@@ -450,22 +453,22 @@
           }
         };
       }
-      
+  
       const pipes = [];
-      
+  
       function updateGameParameters() {
         pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
         pipeGap = (gameMode === "Challenge" ? selectedDifficulty.pipeGap * 0.8 : selectedDifficulty.pipeGap);
         pipeSpawnRate = (gameMode === "Challenge" ? selectedDifficulty.pipeSpawnRate * 0.8 : selectedDifficulty.pipeSpawnRate);
       }
-      
+  
       function drawGround() {
         ctx.fillStyle = '#DED895';
         ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
         ctx.fillStyle = '#755C48';
         ctx.fillRect(0, canvas.height - 100, canvas.width, 20);
       }
-      
+  
       function drawBackground() {
         const dayColor = { r: 113, g:197, b:207 };
         const nightColor = { r:0, g:31, b:63 };
@@ -489,13 +492,13 @@
           ctx.fill();
         });
       }
-      
+  
       let clouds = [
         {x: canvas.width * 0.2, y: canvas.height * 0.2, speed: 0.3, size: 1.0},
         {x: canvas.width * 0.7, y: canvas.height * 0.3, speed: 0.5, size: 1.2},
         {x: canvas.width * 0.4, y: canvas.height * 0.15, speed: 0.2, size: 0.7}
       ];
-      
+  
       function spawnParticles(x, y) {
         for (let i = 0; i < 20; i++) {
           particles.push({
@@ -508,7 +511,7 @@
           });
         }
       }
-      
+  
       function updateParticles() {
         for (let i = particles.length - 1; i >= 0; i--) {
           let p = particles[i];
@@ -527,7 +530,7 @@
           }
         }
       }
-      
+  
       function drawParticles() {
         particles.forEach(p => {
           if (p.alpha < 0.05) return;
@@ -537,7 +540,7 @@
           ctx.fill();
         });
       }
-      
+  
       function gameLoop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
@@ -561,22 +564,22 @@
         drawParticles();
         requestAnimationFrame(gameLoop);
       }
-      
+  
       function getLeaderboard() {
         const board = localStorage.getItem('leaderboard');
         return board ? JSON.parse(board) : [];
       }
-      
+  
       function setLeaderboard(board) {
         localStorage.setItem('leaderboard', JSON.stringify(board));
       }
-      
+  
       function updateLeaderboardDisplay() {
         const board = getLeaderboard();
         board.sort((a, b) => b.score - a.score);
         leaderboardList.innerHTML = board.map(entry => `<div>${entry.name}: ${entry.score}</div>`).join('');
       }
-      
+  
       function addScoreToLeaderboard() {
         if (score <= 0) return;
         const playerName = prompt("Game Over! Enter your name for the leaderboard:");
@@ -587,7 +590,7 @@
           updateLeaderboardDisplay();
         }
       }
-      
+  
       function spawnPipe() {
         if (!gameRunning) return;
         const currentTime = Date.now();
@@ -596,7 +599,7 @@
           lastPipeTime = currentTime;
         }
       }
-      
+  
       function startCountdown() {
         // Hide selection UIs during countdown
         document.getElementById('difficulty-selection').style.display = 'none';
@@ -615,7 +618,7 @@
           }
         }, 1000);
       }
-      
+  
       function startGame() {
         gameStarted = true;
         gameRunning = true;
@@ -631,7 +634,7 @@
         updateGameParameters();
         lastPipeTime = Date.now();
       }
-      
+  
       function updateHighScore() {
         if (score > highScore) {
           highScore = score;
@@ -643,7 +646,7 @@
           highScoreDisplay.innerText = `High Score: ${highScore}`;
         }
       }
-      
+  
       function gameOver() {
         if (!gameRunning) return;
         gameRunning = false;
@@ -656,7 +659,7 @@
         document.getElementById('skin-selection').style.display = 'block';
         spawnParticles(bird.x, bird.y);
       }
-      
+  
       canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (!gameStarted) {
@@ -665,7 +668,7 @@
           bird.flap();
         }
       });
-      
+  
       canvas.addEventListener('click', () => {
         if (!gameStarted) {
           startCountdown();
@@ -673,79 +676,90 @@
           bird.flap();
         }
       });
-      
+  
       restartButton.addEventListener('click', startCountdown);
-      
+  
       pauseButton.addEventListener('click', () => {
         paused = !paused;
         pauseButton.innerText = paused ? 'Resume' : 'Pause';
       });
-      
+  
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
           paused = !paused;
           pauseButton.innerText = paused ? 'Resume' : 'Pause';
         }
       });
-      
+  
       classicBtn.addEventListener('click', () => {
         gameMode = "Classic";
         classicBtn.classList.add('selected');
         challengeBtn.classList.remove('selected');
       });
-      
+  
       challengeBtn.addEventListener('click', () => {
         gameMode = "Challenge";
         challengeBtn.classList.add('selected');
         classicBtn.classList.remove('selected');
       });
-      
+  
       easyBtn.addEventListener('click', () => {
         selectedDifficulty = difficulties.Easy;
         easyBtn.classList.add('selected');
         mediumBtn.classList.remove('selected');
         hardBtn.classList.remove('selected');
       });
-      
+  
       mediumBtn.addEventListener('click', () => {
         selectedDifficulty = difficulties.Medium;
         mediumBtn.classList.add('selected');
         easyBtn.classList.remove('selected');
         hardBtn.classList.remove('selected');
       });
-      
+  
       hardBtn.addEventListener('click', () => {
         selectedDifficulty = difficulties.Hard;
         hardBtn.classList.add('selected');
         easyBtn.classList.remove('selected');
         mediumBtn.classList.remove('selected');
       });
-      
+  
       redSkinBtn.addEventListener('click', () => {
         selectedSkin = "red";
         redSkinBtn.classList.add('selected');
         blueSkinBtn.classList.remove('selected');
         greenSkinBtn.classList.remove('selected');
+        pinkSkinBtn.classList.remove('selected');
       });
-      
+  
       blueSkinBtn.addEventListener('click', () => {
         selectedSkin = "blue";
         blueSkinBtn.classList.add('selected');
         redSkinBtn.classList.remove('selected');
         greenSkinBtn.classList.remove('selected');
+        pinkSkinBtn.classList.remove('selected');
       });
-      
+  
       greenSkinBtn.addEventListener('click', () => {
         selectedSkin = "green";
         greenSkinBtn.classList.add('selected');
         redSkinBtn.classList.remove('selected');
         blueSkinBtn.classList.remove('selected');
+        pinkSkinBtn.classList.remove('selected');
       });
-      
+  
+      pinkSkinBtn.addEventListener('click', () => {
+        selectedSkin = "pink";
+        pinkSkinBtn.classList.add('selected');
+        redSkinBtn.classList.remove('selected');
+        blueSkinBtn.classList.remove('selected');
+        greenSkinBtn.classList.remove('selected');
+      });
+  
       // Updated share functionality using the Web Share API.
-      // If sharing is aborted, no error alert is shown.
+      // The share text no longer includes the link so it doesn't duplicate the URL provided in the "url" field.
       document.getElementById('share-button').addEventListener('click', async () => {
-        const shareText = `I scored ${score} in Dragon Flight, and my high score is ${highScore}! Can you beat me? Play now at: https://14spartan117.github.io/Flappy-Birds/`;
+        const shareText = `I scored ${score} in Dragon Flight, and my high score is ${highScore}! Can you beat me?`;
         if (navigator.share) {
           try {
             await navigator.share({
@@ -756,7 +770,7 @@
           } catch (err) {
             if (err.name !== 'AbortError') {
               if (navigator.clipboard) {
-                await navigator.clipboard.writeText(shareText);
+                await navigator.clipboard.writeText(shareText + " Play now at: https://14spartan117.github.io/Flappy-Birds/");
                 alert("Share message copied to clipboard!");
               } else {
                 alert("Sharing not supported.");
@@ -764,14 +778,14 @@
             }
           }
         } else if (navigator.clipboard) {
-          navigator.clipboard.writeText(shareText).then(() => {
+          navigator.clipboard.writeText(shareText + " Play now at: https://14spartan117.github.io/Flappy-Birds/").then(() => {
             alert("Share message copied to clipboard!");
           });
         } else {
           alert("Sharing not supported.");
         }
       });
-      
+  
       updateLeaderboardDisplay();
       gameLoop();
     });
