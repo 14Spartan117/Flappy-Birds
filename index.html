@@ -2,34 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- Add viewport-fit=cover to ensure content covers the safe area -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dragon Flight - Kodex</title>
   <style>
-    * {
+    /* Reset and include safe area insets for iOS Safari */
+    html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
       box-sizing: border-box;
     }
+    
     body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
       font-family: Arial, sans-serif;
+      overflow: hidden;
+      background-color: #71C5CF;
       touch-action: manipulation;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
-      overflow: hidden;
-      background-color: #71C5CF;
     }
+    
+    /* Adjust game container height to account for safe areas */
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      overflow: hidden;
+    }
+    
     canvas {
       display: block;
       margin: 0 auto;
       touch-action: none;
     }
-    #game-container {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      overflow: hidden;
-    }
+    
     #score-display {
       position: absolute;
       top: 20px;
@@ -38,21 +48,23 @@
       font-size: 40px;
       font-weight: bold;
       color: white;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
       z-index: 10;
     }
+    
     #leaderboard {
       position: absolute;
       top: 20px;
       left: 20px;
       z-index: 40;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0,0,0,0.5);
       color: white;
       padding: 10px;
       border-radius: 5px;
       font-size: 16px;
       max-width: 200px;
     }
+    
     #start-message {
       position: absolute;
       top: 30%;
@@ -62,11 +74,12 @@
       font-size: 48px;
       font-weight: bold;
       color: white;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0,0,0,0.5);
       padding: 20px;
       border-radius: 10px;
       z-index: 20;
     }
+    
     #achievement-notification {
       position: absolute;
       top: 40%;
@@ -78,6 +91,7 @@
       display: none;
       z-index: 50;
     }
+    
     /* Game over sign moved higher */
     #game-over {
       position: absolute;
@@ -88,12 +102,13 @@
       font-size: 30px;
       font-weight: bold;
       color: white;
-      background-color: rgba(0, 0, 0, 0.7);
+      background-color: rgba(0,0,0,0.7);
       padding: 20px;
       border-radius: 10px;
       display: none;
       z-index: 30;
     }
+    
     #game-over button {
       margin-top: 10px;
       padding: 10px 20px;
@@ -104,21 +119,24 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    
     #high-score {
       margin-top: 10px;
       font-size: 20px;
     }
+    
     #pause-button {
       position: absolute;
       top: 20px;
       right: 20px;
       z-index: 40;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 5px;
       color: white;
       cursor: pointer;
     }
+    
     /* Bottom controls container that wraps the three selection groups */
     #bottom-controls {
       position: absolute;
@@ -133,11 +151,13 @@
       max-width: 100%;
       gap: 20px;
     }
+    
     /* Styling for each selection block */
     #mode-selection, #difficulty-selection, #skin-selection {
       text-align: center;
       color: white;
     }
+    
     #mode-selection h2,
     #difficulty-selection h2,
     #skin-selection h2 {
@@ -145,6 +165,7 @@
       margin-bottom: 5px;
       text-shadow: 1px 1px 2px #000;
     }
+    
     .mode-buttons,
     .difficulty-buttons,
     .skin-buttons {
@@ -152,6 +173,7 @@
       justify-content: center;
       gap: 10px;
     }
+    
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
@@ -162,6 +184,7 @@
       cursor: pointer;
       background-color: #ccc;
     }
+    
     .mode-btn.selected,
     .difficulty-btn.selected,
     .skin-btn.selected {
@@ -719,8 +742,8 @@
         blueSkinBtn.classList.remove('selected');
       });
       
-      // Updated share functionality: use the Web Share API if available.
-      // If share is aborted (AbortError), we silently fall back to clipboard without showing an error alert.
+      // Updated share functionality using the Web Share API.
+      // If the share is aborted, we silently fall back to clipboard without showing an error.
       document.getElementById('share-button').addEventListener('click', async () => {
         const shareText = `I scored ${score} in Dragon Flight, and my high score is ${highScore}! Can you beat me? Play now at: https://14spartan117.github.io/Flappy-Birds/`;
         if (navigator.share) {
@@ -731,7 +754,6 @@
               url: 'https://14spartan117.github.io/Flappy-Birds/'
             });
           } catch (err) {
-            // If the share was aborted, do nothing; otherwise, fallback to clipboard.
             if (err.name !== 'AbortError') {
               if (navigator.clipboard) {
                 await navigator.clipboard.writeText(shareText);
