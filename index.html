@@ -6,7 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dragon Flight - Kodex</title>
   <style>
-    /* Basic reset with safe-area fallback */
+    :root {
+      /* Default safe-area insets */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
     html, body {
       margin: 0;
       padding: 0;
@@ -14,7 +19,7 @@
       box-sizing: border-box;
     }
     body {
-      padding-top: env(safe-area-inset-top, 0px);
+      padding-top: var(--safe-top);
       padding-bottom: env(safe-area-inset-bottom, 0px);
       font-family: Arial, sans-serif;
       overflow: hidden;
@@ -39,10 +44,10 @@
       touch-action: none;
       z-index: 0;
     }
-    /* Top UI elements using safe-area with fallback */
+    /* Top UI elements use our safe-area variables */
     #score-display {
       position: absolute;
-      top: calc(20px + env(safe-area-inset-top, 0px));
+      top: calc(20px + var(--safe-top));
       width: 100%;
       text-align: center;
       font-size: 40px;
@@ -53,8 +58,8 @@
     }
     #leaderboard {
       position: absolute;
-      top: calc(20px + env(safe-area-inset-top, 0px));
-      left: calc(20px + env(safe-area-inset-left, 0px));
+      top: calc(20px + var(--safe-top));
+      left: calc(20px + var(--safe-left));
       z-index: 40;
       background: rgba(0,0,0,0.5);
       color: white;
@@ -119,11 +124,11 @@
       margin-top: 10px;
       font-size: 20px;
     }
-    /* Pause button using safe-area insets with fallback */
+    /* Pause button using our safe-area variables */
     #pause-button {
       position: absolute;
-      top: calc(20px + env(safe-area-inset-top, 0px));
-      right: calc(20px + env(safe-area-inset-right, 0px));
+      top: calc(20px + var(--safe-top));
+      right: calc(20px + var(--safe-right));
       z-index: 40;
       background: rgba(0,0,0,0.5);
       padding: 10px;
@@ -235,6 +240,13 @@
   </div>
   
   <script>
+    // If hosted on GitHub, override safe-area variables so that UI elements aren’t hidden.
+    if (window.location.host.includes("github")) {
+      document.documentElement.style.setProperty('--safe-top', '80px');
+      document.documentElement.style.setProperty('--safe-left', '20px');
+      document.documentElement.style.setProperty('--safe-right', '20px');
+    }
+    
     document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('game-canvas');
       const ctx = canvas.getContext('2d');
@@ -257,7 +269,7 @@
       const mediumBtn = document.getElementById('medium-btn');
       const hardBtn = document.getElementById('hard-btn');
   
-      // Skin selection buttons, including new pink skin
+      // Skin selection buttons
       const redSkinBtn = document.getElementById('red-skin-btn');
       const blueSkinBtn = document.getElementById('blue-skin-btn');
       const greenSkinBtn = document.getElementById('green-skin-btn');
@@ -284,17 +296,13 @@
       };
   
       let selectedDifficulty = difficulties.Medium;
-  
-      // Default game mode and skin
-      let gameMode = "Classic"; // or "Challenge"
+      let gameMode = "Classic";
       let selectedSkin = "red";
   
-      // Game parameters (will be recalculated)
       let pipeGap = selectedDifficulty.pipeGap;
       let pipeSpawnRate = selectedDifficulty.pipeSpawnRate;
       let pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
   
-      // High score
       let highScore = localStorage.getItem('highScore') || 0;
       highScoreDisplay.innerText = `High Score: ${highScore}`;
   
@@ -304,10 +312,8 @@
       let lastPipeTime = 0;
       let paused = false;
   
-      // Particle effects array
       const particles = [];
   
-      // Achievements
       const achievements = [
         { score: 1, message: "First Flap!" },
         { score: 10, message: "Nice! 10 points!" },
@@ -320,9 +326,7 @@
       function showAchievement(message) {
         achievementNotification.innerText = message;
         achievementNotification.style.display = 'block';
-        setTimeout(() => {
-          achievementNotification.style.display = 'none';
-        }, 2000);
+        setTimeout(() => { achievementNotification.style.display = 'none'; }, 2000);
       }
   
       function checkAchievements(currentScore) {
@@ -334,7 +338,6 @@
         });
       }
   
-      // Skins definitions for customization, including a new pink skin
       const skins = {
         red: { body: '#CC0000', wing: '#AA0000', head: '#CC0000', snout: '#AA0000', eye: '#FFFF00' },
         blue: { body: '#0000CC', wing: '#0000AA', head: '#0000CC', snout: '#000099', eye: '#FFFFFF' },
@@ -342,7 +345,6 @@
         pink: { body: '#FF69B4', wing: '#FF1493', head: '#FF69B4', snout: '#FF1493', eye: '#FFFFFF' }
       };
   
-      // Dragon object (formerly bird)
       const bird = {
         x: canvas.width / 4,
         y: canvas.height / 2,
@@ -351,12 +353,12 @@
         velocity: 0,
         draw() {
           const skin = skins[selectedSkin];
-          // Dragon body
+          // Draw body
           ctx.fillStyle = skin.body;
           ctx.beginPath();
           ctx.ellipse(this.x, this.y, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
           ctx.fill();
-          // Wings
+          // Draw wings
           ctx.fillStyle = skin.wing;
           ctx.beginPath();
           ctx.moveTo(this.x, this.y - 5);
@@ -370,7 +372,7 @@
           ctx.lineTo(this.x - 5, this.y + 15);
           ctx.closePath();
           ctx.fill();
-          // Head and eye
+          // Draw head and eye
           ctx.fillStyle = skin.head;
           ctx.beginPath();
           ctx.arc(this.x + 15, this.y - 5, 12, 0, Math.PI * 2);
@@ -383,7 +385,7 @@
           ctx.beginPath();
           ctx.arc(this.x + 18, this.y - 8, 2, 0, Math.PI * 2);
           ctx.fill();
-          // Snout/mouth
+          // Draw snout
           ctx.fillStyle = skin.snout;
           ctx.beginPath();
           ctx.moveTo(this.x + 25, this.y - 5);
@@ -391,7 +393,7 @@
           ctx.lineTo(this.x + 25, this.y + 3);
           ctx.closePath();
           ctx.fill();
-          // Tail
+          // Draw tail
           ctx.fillStyle = skin.snout;
           ctx.beginPath();
           ctx.moveTo(this.x - 20, this.y);
@@ -518,7 +520,6 @@
           p.x += p.vx;
           p.y += p.vy;
           p.alpha -= 0.02;
-          // Remove particle if nearly transparent or completely off-screen (using its radius)
           if (
             p.alpha <= 0.05 ||
             (p.x + p.radius < 0) ||
@@ -547,7 +548,6 @@
         if (!paused) {
           if (gameRunning) {
             spawnPipe();
-            // Iterate backwards to safely remove off-screen pipes
             for (let i = pipes.length - 1; i >= 0; i--) {
               pipes[i].update();
               pipes[i].draw();
@@ -601,7 +601,6 @@
       }
   
       function startCountdown() {
-        // Hide selection UIs during countdown
         document.getElementById('difficulty-selection').style.display = 'none';
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('skin-selection').style.display = 'none';
@@ -653,7 +652,6 @@
         updateHighScore();
         gameOverMessage.style.display = 'block';
         addScoreToLeaderboard();
-        // Restore selection UIs after game over
         document.getElementById('difficulty-selection').style.display = 'block';
         document.getElementById('mode-selection').style.display = 'block';
         document.getElementById('skin-selection').style.display = 'block';
@@ -756,8 +754,6 @@
         greenSkinBtn.classList.remove('selected');
       });
   
-      // Updated share functionality using the Web Share API.
-      // The share text no longer includes the link so it doesn't duplicate the URL provided in the "url" field.
       document.getElementById('share-button').addEventListener('click', async () => {
         const shareText = `I scored ${score} in Dragon Flight, and my high score is ${highScore}! Can you beat me?`;
         if (navigator.share) {
