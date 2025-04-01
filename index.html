@@ -240,11 +240,16 @@
   </div>
   
   <script>
-    // If hosted on GitHub, override safe-area variables so that UI elements aren’t hidden.
+    // If hosted on GitHub, override safe-area variables and adjust container height.
     if (window.location.host.includes("github")) {
       document.documentElement.style.setProperty('--safe-top', '80px');
       document.documentElement.style.setProperty('--safe-left', '20px');
       document.documentElement.style.setProperty('--safe-right', '20px');
+      const gameContainer = document.getElementById('game-container');
+      if (gameContainer) {
+        // Subtract 80px (or adjust as needed) to account for GitHub's header
+        gameContainer.style.height = "calc(100vh - 80px)";
+      }
     }
     
     document.addEventListener('DOMContentLoaded', () => {
@@ -600,7 +605,7 @@
         }
       }
   
-      function startCountdown() {        
+      function startCountdown() {
         gameOverMessage.style.display = 'none';
         document.getElementById('difficulty-selection').style.display = 'none';
         document.getElementById('mode-selection').style.display = 'none';
