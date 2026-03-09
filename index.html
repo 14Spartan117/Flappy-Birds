@@ -4,6 +4,15 @@
   <meta charset="UTF-8" />
   <!-- Use viewport-fit=cover with safe area fallback -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="Dragon Flight is a fun, challenging Flappy Bird-style game. Fly your dragon through pipes, choose skins and difficulty, and compete on the leaderboard!" />
+  <meta name="theme-color" content="#71C5CF" />
+  <!-- Open Graph tags for social sharing -->
+  <meta property="og:title" content="Dragon Flight - Kodex" />
+  <meta property="og:description" content="Fly your dragon through pipes! Choose skins, difficulty, and compete on the leaderboard." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://14spartan117.github.io/Flappy-Birds/" />
+  <!-- Inline SVG favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>" />
   <title>Dragon Flight - Kodex</title>
   <style>
     :root {
@@ -198,7 +207,7 @@
       <div id="leaderboard-list"></div>
     </div>
     <div id="achievement-notification"></div>
-    <div id="start-message">Tap to Start and Flap!</div>
+    <div id="start-message">Tap or press ↑ to Start and Flap!</div>
     
     <!-- Bottom Controls: Mode, Difficulty, and Skin Selections -->
     <div id="bottom-controls">
@@ -252,7 +261,60 @@
       }
     }
     
-    document.addEventListener('DOMContentLoaded', () => {
+      // --- Sound Effects using Web Audio API ---
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      let audioCtx;
+      function ensureAudioCtx() {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        return audioCtx;
+      }
+
+      function playFlapSound() {
+        const ctx = ensureAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      }
+
+      function playScoreSound() {
+        const ctx = ensureAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523, ctx.currentTime);
+        osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.25);
+      }
+
+      function playGameOverSound() {
+        const ctx = ensureAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
       const canvas = document.getElementById('game-canvas');
       const ctx = canvas.getContext('2d');
       const scoreDisplay = document.getElementById('score-display');
@@ -422,6 +484,7 @@
         },
         flap() {
           this.velocity = jumpForce;
+          playFlapSound();
         }
       };
   
@@ -449,6 +512,7 @@
             scoreDisplay.innerText = score;
             this.scored = true;
             checkAchievements(score);
+            playScoreSound();
           }
           if (
             bird.x + bird.width / 2 > this.x &&
@@ -582,7 +646,12 @@
       function updateLeaderboardDisplay() {
         const board = getLeaderboard();
         board.sort((a, b) => b.score - a.score);
-        leaderboardList.innerHTML = board.map(entry => `<div>${entry.name}: ${entry.score}</div>`).join('');
+        leaderboardList.innerHTML = '';
+        board.forEach(entry => {
+          const div = document.createElement('div');
+          div.textContent = `${entry.name}: ${entry.score}`;
+          leaderboardList.appendChild(div);
+        });
       }
   
       function addScoreToLeaderboard() {
@@ -657,6 +726,7 @@
         gameRunning = false;
         updateHighScore();
         gameOverMessage.style.display = 'block';
+        playGameOverSound();
         addScoreToLeaderboard();
         document.getElementById('difficulty-selection').style.display = 'block';
         document.getElementById('mode-selection').style.display = 'block';
@@ -690,8 +760,17 @@
   
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
+          e.preventDefault();
           paused = !paused;
           pauseButton.innerText = paused ? 'Resume' : 'Pause';
+        }
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+          e.preventDefault();
+          if (!gameStarted) {
+            startCountdown();
+          } else if (gameRunning && !paused) {
+            bird.flap();
+          }
         }
       });
   
