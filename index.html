@@ -79,7 +79,7 @@
     }
     #start-high-score {
       font-size: 20px;
-      margin-top: 5px;
+      margin: 5px 0 0 0;
     }
     /* Reduced start message size and padding */
     #start-message {
@@ -295,7 +295,7 @@
       <div id="leaderboard-list"></div>
     </div>
     <div id="achievement-notification" aria-live="polite"></div>
-    <div id="start-message">Tap or press ↑ to Start and Flap!<div id="start-high-score"></div></div>
+    <div id="start-message">Tap or press ↑ to Start and Flap!<p id="start-high-score"></p></div>
     
     <!-- Bottom Controls: Mode, Difficulty, and Skin Selections -->
     <div id="bottom-controls">
@@ -474,6 +474,7 @@
       const TARGET_FRAME_MS = 16.67;
       const MAX_DT_MULTIPLIER = 3;
       const LEADERBOARD_MAX_ENTRIES = 10;
+      const DEFAULT_PLAYER_NAME = 'Anonymous';
 
       // Game variables
       const gravity = 0.5;
@@ -747,7 +748,8 @@
         if (!timestamp) timestamp = performance.now();
         const elapsed = timestamp - lastFrameTime;
         lastFrameTime = timestamp;
-        // Normalize dt to 60fps (16.67ms per frame)
+        // Normalize dt to 60fps (16.67ms per frame); clamp to MAX_DT_MULTIPLIER
+        // to prevent physics jumps when the tab is backgrounded or frame drops occur
         const dt = Math.min(elapsed / TARGET_FRAME_MS, MAX_DT_MULTIPLIER);
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -826,7 +828,7 @@
 
       nameSubmitBtn.addEventListener('click', () => {
         const name = playerNameInput.value.trim();
-        submitLeaderboardEntry(name || 'Anonymous');
+        submitLeaderboardEntry(name || DEFAULT_PLAYER_NAME);
       });
 
       nameSkipBtn.addEventListener('click', () => {
@@ -836,7 +838,7 @@
       playerNameInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           const name = playerNameInput.value.trim();
-          submitLeaderboardEntry(name || 'Anonymous');
+          submitLeaderboardEntry(name || DEFAULT_PLAYER_NAME);
         }
       });
   
