@@ -455,9 +455,12 @@
       function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        bird.x = canvas.width / 4;
-        if (!gameStarted) bird.y = canvas.height / 2;
+        if (birdInitialized) {
+          bird.x = canvas.width / 4;
+          if (!gameStarted) bird.y = canvas.height / 2;
+        }
       }
+      let birdInitialized = false;
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
   
@@ -505,6 +508,8 @@
       let gameRunning = false;
       let lastPipeTime = 0;
       let paused = false;
+      let countdownActive = false;
+      let lastFrameTime = performance.now();
   
       const particles = [];
   
@@ -613,6 +618,7 @@
           playFlapSound();
         }
       };
+      birdInitialized = true;
   
       function Pipe(x) {
         this.x = x;
