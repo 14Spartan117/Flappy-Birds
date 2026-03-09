@@ -21,6 +21,39 @@
       --safe-left: env(safe-area-inset-left, 0px);
       --safe-right: env(safe-area-inset-right, 0px);
     }
+    /* Combo display */
+    #combo-display {
+      position: absolute;
+      top: calc(70px + var(--safe-top));
+      width: 100%;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+      z-index: 10;
+      pointer-events: none;
+    }
+    /* FPS counter */
+    #fps-counter {
+      position: absolute;
+      bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      right: calc(10px + var(--safe-right));
+      z-index: 40;
+      background: rgba(0,0,0,0.5);
+      color: #0f0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: monospace;
+      display: none;
+    }
+    /* Stats display on game over */
+    #stats-display {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #ccc;
+    }
     html, body {
       margin: 0;
       padding: 0;
@@ -290,6 +323,8 @@
 <body>
   <div id="game-container">
     <div id="score-display" aria-live="polite">0</div>
+    <div id="combo-display"></div>
+    <div id="fps-counter">FPS: --</div>
     <div id="leaderboard">
       <strong>Leaderboard</strong>
       <div id="leaderboard-list"></div>
@@ -327,8 +362,10 @@
     
     <div id="game-over">
       Game Over!
+      <div id="medal-display"></div>
       <div id="final-score">Score: 0</div>
       <div id="high-score">High Score: 0</div>
+      <div id="stats-display"></div>
       <button id="restart-button" aria-label="Restart game">Restart</button>
       <button id="share-button" aria-label="Share score">Share Score</button>
     </div>
@@ -511,7 +548,66 @@
       let paused = false;
       let countdownActive = false;
       let lastFrameTime = performance.now();
-  
+
+      // --- Feature 1: Screen Shake ---
+      let shakeTimer = 0;
+      let shakeIntensity = 0;
+      const SHAKE_DURATION = 300; // ms
+      const SHAKE_MAX_INTENSITY = 8;
+
+      // --- Feature 2: Wing Flap Timer ---
+      let wingTimer = 0;
+
+      // --- Feature 4: Combo Scoring ---
+      let comboCount = 0;
+      let lastScoreTime = 0;
+      const COMBO_WINDOW_MS = 2000;
+      const comboDisplay = document.getElementById('combo-display');
+
+      // --- Feature 5: Ghost/Best Run Trail ---
+      let bestRunPositions = [];
+      let currentRunPositions = [];
+      let ghostRecordInterval = null;
+
+      // --- Feature 6: Floating Score Popups ---
+      const scorePopups = [];
+
+      // --- Feature 8: Dragon Fire Particles ---
+      const fireParticles = [];
+
+      // --- Feature 9: Twinkling Stars ---
+      const stars = [];
+      (function initStars() {
+        for (let i = 0; i < 80; i++) {
+          stars.push({
+            x: Math.random(),
+            y: Math.random() * 0.7,
+            radius: Math.random() * 1.5 + 0.5,
+            phase: Math.random() * Math.PI * 2,
+            speed: Math.random() * 2 + 1
+          });
+        }
+      })();
+
+      // --- Feature 10: Camera Follow ---
+      let cameraOffsetY = 0;
+
+      // --- Feature 14: FPS Counter ---
+      let showFPS = false;
+      let fpsValue = 0;
+      const fpsCounter = document.getElementById('fps-counter');
+
+      // --- Feature 15: Stats Tracking ---
+      let statsData = { totalGames: 0, totalScore: 0, bestStreak: 0 };
+      try {
+        const saved = localStorage.getItem('dragonStats');
+        if (saved) statsData = Object.assign(statsData, JSON.parse(saved));
+      } catch (e) { /* storage unavailable */ }
+
+      function saveStats() {
+        try { localStorage.setItem('dragonStats', JSON.stringify(statsData)); } catch (e) {}
+      }
+
       const particles = [];
   
       const achievements = [
@@ -551,25 +647,31 @@
         width: 50,
         height: 40,
         velocity: 0,
-        draw() {
-          const skin = skins[selectedSkin];
+        draw(ghost) {
+          const skin = ghost ? { body: 'rgba(200,220,255,0.35)', wing: 'rgba(180,200,255,0.25)', head: 'rgba(200,220,255,0.35)', snout: 'rgba(180,200,255,0.25)', eye: 'rgba(255,255,255,0.4)' } : skins[selectedSkin];
+          // --- Feature 2: velocity-based wing angle ---
+          const wingAngle = Math.max(-0.5, Math.min(0.5, this.velocity * 0.05));
+          const wingSin = Math.sin(wingTimer * 0.15) * 0.3;
+          const wUp = wingAngle - wingSin;   // upper wing offset
+          const wDn = wingAngle + wingSin;   // lower wing offset
+
           // Draw body
           ctx.fillStyle = skin.body;
           ctx.beginPath();
           ctx.ellipse(this.x, this.y, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
           ctx.fill();
-          // Draw wings
+          // Draw wings (animated)
           ctx.fillStyle = skin.wing;
           ctx.beginPath();
           ctx.moveTo(this.x, this.y - 5);
-          ctx.lineTo(this.x - 20, this.y - 30);
-          ctx.lineTo(this.x - 5, this.y - 15);
+          ctx.lineTo(this.x - 20, this.y - 30 + wUp * 20);
+          ctx.lineTo(this.x - 5, this.y - 15 + wUp * 10);
           ctx.closePath();
           ctx.fill();
           ctx.beginPath();
           ctx.moveTo(this.x, this.y + 5);
-          ctx.lineTo(this.x - 20, this.y + 25);
-          ctx.lineTo(this.x - 5, this.y + 15);
+          ctx.lineTo(this.x - 20, this.y + 25 + wDn * 20);
+          ctx.lineTo(this.x - 5, this.y + 15 + wDn * 10);
           ctx.closePath();
           ctx.fill();
           // Draw head and eye
@@ -581,10 +683,12 @@
           ctx.beginPath();
           ctx.arc(this.x + 18, this.y - 8, 4, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = '#000000';
-          ctx.beginPath();
-          ctx.arc(this.x + 18, this.y - 8, 2, 0, Math.PI * 2);
-          ctx.fill();
+          if (!ghost) {
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(this.x + 18, this.y - 8, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
           // Draw snout
           ctx.fillStyle = skin.snout;
           ctx.beginPath();
@@ -621,6 +725,14 @@
       };
       birdInitialized = true;
   
+      // --- Feature 11: Pipe color based on score ---
+      function getPipeColor(currentScore) {
+        if (currentScore >= 50) return { body: '#C0392B', cap: '#962d22' };
+        if (currentScore >= 25) return { body: '#8E44AD', cap: '#6c3483' };
+        if (currentScore >= 10) return { body: '#2980B9', cap: '#1a6391' };
+        return { body: '#75B91A', cap: '#5A9117' };
+      }
+
       function Pipe(x) {
         this.x = x;
         this.width = basePipeWidth;
@@ -628,22 +740,68 @@
         const minGapY = pipeGap + GROUND_HEIGHT;
         const maxGapY = canvas.height - pipeGap - 2 * GROUND_HEIGHT;
         this.gapY = Math.random() * (maxGapY - minGapY) + minGapY;
-  
+
         this.draw = function() {
-          ctx.fillStyle = '#75B91A';
+          const colors = getPipeColor(score);
+          ctx.fillStyle = colors.body;
           ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
           ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
-          ctx.fillStyle = '#5A9117';
+          ctx.fillStyle = colors.cap;
           ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
           ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
         };
-  
+
         this.update = function(dt) {
           this.x -= pipeSpeed * dt;
           if (!this.scored && this.x + this.width < bird.x) {
-            score++;
-            scoreDisplay.innerText = score;
             this.scored = true;
+
+            // --- Feature 4: Combo scoring ---
+            const now = Date.now();
+            if (now - lastScoreTime <= COMBO_WINDOW_MS) {
+              comboCount++;
+            } else {
+              comboCount = 1;
+            }
+            lastScoreTime = now;
+
+            // Determine multiplier
+            let multiplier = 1;
+            if (comboCount >= 5) multiplier = 3;
+            else if (comboCount >= 3) multiplier = 2;
+
+            score += multiplier;
+            scoreDisplay.innerText = score;
+
+            // Update combo display
+            if (comboCount >= 3) {
+              comboDisplay.innerText = `Combo x${multiplier}! (${comboCount})`;
+              comboDisplay.style.opacity = '1';
+            } else {
+              comboDisplay.innerText = '';
+            }
+
+            // --- Feature 6: Floating score popup ---
+            scorePopups.push({
+              x: this.x + this.width / 2,
+              y: this.gapY,
+              text: multiplier > 1 ? `+${multiplier}` : '+1',
+              alpha: 1,
+              vy: -1.5
+            });
+
+            // --- Feature 3: Progressive difficulty scaling ---
+            if (score % 10 === 0) {
+              const basePipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
+              const maxPipeSpeed = basePipeSpeed + 3;
+              pipeSpeed = Math.min(pipeSpeed + 0.15, maxPipeSpeed);
+              const minGap = 80;
+              pipeGap = Math.max(pipeGap - 2, minGap);
+            }
+
+            // --- Feature 8: Dragon fire breathing ---
+            spawnFireParticles(bird.x + 40, bird.y);
+
             checkAchievements(score);
             playScoreSound();
           }
@@ -666,13 +824,11 @@
         pipeSpawnRate = (gameMode === "Challenge" ? selectedDifficulty.pipeSpawnRate * 0.8 : selectedDifficulty.pipeSpawnRate);
       }
   
-      function drawGround() {
-        ctx.fillStyle = '#DED895';
-        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
-        ctx.fillStyle = '#755C48';
-        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, 20);
-      }
-  
+      // --- Feature 7: Parallax layers state ---
+      let parallaxOffset1 = 0; // mountains (slow)
+      let parallaxOffset2 = 0; // bushes (medium)
+      let groundOffset = 0;    // ground (fast)
+
       function drawBackground() {
         const dayColor = { r: 113, g:197, b:207 };
         const nightColor = { r:0, g:31, b:63 };
@@ -682,6 +838,44 @@
         const b = Math.floor(dayColor.b * t + nightColor.b * (1-t));
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // --- Feature 9: Twinkling stars at night ---
+        if (t < 0.5) {
+          const starAlpha = Math.max(0, 1 - t * 2);
+          stars.forEach(star => {
+            const twinkle = (Math.sin(Date.now() * 0.001 * star.speed + star.phase) + 1) / 2;
+            ctx.fillStyle = `rgba(255,255,255,${starAlpha * (0.4 + twinkle * 0.6)})`;
+            ctx.beginPath();
+            ctx.arc(star.x * canvas.width, star.y * canvas.height, star.radius, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        // --- Feature 7: Parallax — distant mountains ---
+        if (gameRunning) parallaxOffset1 = (parallaxOffset1 + 0.3) % canvas.width;
+        const mtnY = canvas.height - GROUND_HEIGHT - 120;
+        ctx.fillStyle = `rgba(100,140,100,${0.3 + t * 0.3})`;
+        for (let i = -1; i <= 2; i++) {
+          const bx = (i * canvas.width - parallaxOffset1 + canvas.width) % (canvas.width * 2) - canvas.width * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(bx, canvas.height - GROUND_HEIGHT);
+          ctx.lineTo(bx + canvas.width * 0.25, mtnY);
+          ctx.lineTo(bx + canvas.width * 0.5, canvas.height - GROUND_HEIGHT);
+          ctx.fill();
+        }
+
+        // --- Feature 7: Parallax — mid-ground bushes ---
+        if (gameRunning) parallaxOffset2 = (parallaxOffset2 + 0.8) % 200;
+        ctx.fillStyle = `rgba(60,120,60,${0.5 + t * 0.3})`;
+        for (let bx = -parallaxOffset2; bx < canvas.width + 200; bx += 200) {
+          ctx.beginPath();
+          ctx.arc(bx + 30, canvas.height - GROUND_HEIGHT, 25, Math.PI, 0);
+          ctx.arc(bx + 55, canvas.height - GROUND_HEIGHT, 35, Math.PI, 0);
+          ctx.arc(bx + 80, canvas.height - GROUND_HEIGHT, 25, Math.PI, 0);
+          ctx.fill();
+        }
+
+        // Clouds
         clouds.forEach(cloud => {
           cloud.x -= cloud.speed;
           if (cloud.x < -150) {
@@ -695,6 +889,30 @@
           ctx.arc(cloud.x + 60, cloud.y, 40 * cloud.size, 0, Math.PI * 2);
           ctx.fill();
         });
+      }
+
+      // --- Feature 12: Animated ground with grass blades ---
+      let grassTimer = 0;
+      function drawGround() {
+        grassTimer += 0.03;
+        ctx.fillStyle = '#DED895';
+        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+        ctx.fillStyle = '#755C48';
+        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, 20);
+        // Grass blades
+        const bladeSpacing = 18;
+        const groundTop = canvas.height - GROUND_HEIGHT;
+        for (let gx = 0; gx < canvas.width; gx += bladeSpacing) {
+          const sway = Math.sin(grassTimer + gx * 0.1) * 4;
+          const h = 10 + Math.sin(gx * 0.3) * 3;
+          ctx.fillStyle = '#4a9e2f';
+          ctx.beginPath();
+          ctx.moveTo(gx - 3, groundTop);
+          ctx.lineTo(gx + sway, groundTop - h);
+          ctx.lineTo(gx + 3, groundTop);
+          ctx.closePath();
+          ctx.fill();
+        }
       }
   
       let clouds = [
@@ -743,19 +961,135 @@
           ctx.fill();
         });
       }
+
+      // --- Feature 8: Dragon fire breathing ---
+      const FIRE_COLORS = ['#FF4500', '#FF8C00', '#FFD700', '#FF6347'];
+      function spawnFireParticles(x, y) {
+        for (let i = 0; i < 12; i++) {
+          fireParticles.push({
+            x, y,
+            vx: Math.random() * 4 + 1,
+            vy: (Math.random() - 0.5) * 2,
+            radius: Math.random() * 4 + 2,
+            alpha: 1,
+            color: FIRE_COLORS[Math.floor(Math.random() * FIRE_COLORS.length)]
+          });
+        }
+      }
+
+      function updateFireParticles(dt) {
+        for (let i = fireParticles.length - 1; i >= 0; i--) {
+          const p = fireParticles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.alpha -= 0.06 * dt;
+          p.radius *= 0.97;
+          if (p.alpha <= 0.05) fireParticles.splice(i, 1);
+        }
+      }
+
+      function drawFireParticles() {
+        fireParticles.forEach(p => {
+          if (p.alpha < 0.05) return;
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      // --- Feature 6: Floating score popups ---
+      function updateScorePopups(dt) {
+        for (let i = scorePopups.length - 1; i >= 0; i--) {
+          const p = scorePopups[i];
+          p.y += p.vy * dt;
+          p.alpha -= 0.025 * dt;
+          if (p.alpha <= 0) scorePopups.splice(i, 1);
+        }
+      }
+
+      function drawScorePopups() {
+        scorePopups.forEach(p => {
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = '#FFD700';
+          ctx.font = 'bold 22px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(p.text, p.x, p.y);
+        });
+        ctx.globalAlpha = 1;
+        ctx.textAlign = 'left';
+      }
+
+      // --- Feature 5: Ghost trail drawing ---
+      function drawGhostTrail() {
+        if (bestRunPositions.length === 0) return;
+        const frameIndex = Math.min(
+          Math.floor((Date.now() - gameStartTime) / (1000 / 60)),
+          bestRunPositions.length - 1
+        );
+        if (frameIndex < 0) return;
+        const ghostY = bestRunPositions[frameIndex];
+        // Save/restore to isolate ghost drawing state (already in camera transform)
+        ctx.save();
+        const savedY = bird.y;
+        const savedVel = bird.velocity;
+        bird.y = ghostY;
+        bird.velocity = 0;
+        bird.draw(true);
+        bird.y = savedY;
+        bird.velocity = savedVel;
+        ctx.restore();
+      }
+
+      let gameStartTime = 0;
   
       function gameLoop(timestamp) {
         if (!timestamp) timestamp = performance.now();
         const elapsed = timestamp - lastFrameTime;
         lastFrameTime = timestamp;
         // Normalize dt to 60fps (16.67ms per frame); clamp to MAX_DT_MULTIPLIER
-        // to prevent physics jumps when the tab is backgrounded or frame drops occur
         const dt = Math.min(elapsed / TARGET_FRAME_MS, MAX_DT_MULTIPLIER);
 
+        // --- Feature 14: FPS ---
+        if (elapsed > 0) {
+          fpsValue = Math.round(1000 / elapsed);
+          if (showFPS) fpsCounter.innerText = `FPS: ${fpsValue}`;
+        }
+
+        // --- Feature 2: Wing timer ---
+        wingTimer += dt;
+
+        // --- Feature 1: Screen shake offset ---
+        let shakeX = 0, shakeY = 0;
+        if (shakeTimer > 0) {
+          shakeTimer -= elapsed;
+          const intensity = shakeIntensity * (shakeTimer / SHAKE_DURATION);
+          shakeX = (Math.random() - 0.5) * intensity * 2;
+          shakeY = (Math.random() - 0.5) * intensity * 2;
+        }
+
+        // --- Feature 10: Smooth camera follow ---
+        const targetOffsetY = -(bird.y - canvas.height / 2) * 0.1;
+        cameraOffsetY += (targetOffsetY - cameraOffsetY) * 0.05 * dt;
+        // Clamp so we don't scroll into the ground
+        cameraOffsetY = Math.max(Math.min(cameraOffsetY, canvas.height * 0.15), -canvas.height * 0.15);
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+
         drawBackground();
+
+        ctx.save();
+        ctx.translate(0, cameraOffsetY);
+
         if (!paused) {
           if (gameRunning) {
+            // --- Feature 5: Record current run positions ---
+            currentRunPositions.push(bird.y);
+
             spawnPipe();
             for (let i = pipes.length - 1; i >= 0; i--) {
               pipes[i].update(dt);
@@ -767,10 +1101,23 @@
             bird.update(dt);
           }
         }
-        bird.draw();
+
+        // --- Feature 5: Draw ghost trail ---
+        if (gameRunning) drawGhostTrail();
+
+        bird.draw(false);
+        ctx.restore(); // pop camera transform
+
         drawGround();
+
         updateParticles(dt);
         drawParticles();
+        updateFireParticles(dt);
+        drawFireParticles();
+        updateScorePopups(dt);
+        drawScorePopups();
+
+        ctx.restore(); // pop shake transform
         requestAnimationFrame(gameLoop);
       }
   
@@ -886,12 +1233,27 @@
         bird.velocity = 0;
         pipes.length = 0;
         particles.length = 0;
+        scorePopups.length = 0;
+        fireParticles.length = 0;
         unlockedAchievements.clear();
+        comboCount = 0;
+        comboDisplay.innerText = '';
+        currentRunPositions = [];
+        gameStartTime = Date.now();
         updateGameParameters();
         lastPipeTime = Date.now();
         lastFrameTime = performance.now();
       }
   
+      // --- Feature 13: Medal system ---
+      function getMedal(s) {
+        if (s >= 100) return { label: 'Platinum', color: '#E5E4E2', glow: '#fff' };
+        if (s >= 50)  return { label: 'Gold',     color: '#FFD700', glow: '#ffa500' };
+        if (s >= 25)  return { label: 'Silver',   color: '#C0C0C0', glow: '#aaa' };
+        if (s >= 10)  return { label: 'Bronze',   color: '#CD7F32', glow: '#8B4513' };
+        return null;
+      }
+
       function updateHighScore() {
         if (score > highScore) {
           highScore = score;
@@ -907,12 +1269,47 @@
           highScoreDisplay.innerText = `High Score: ${highScore}`;
         }
       }
-  
+
       function gameOver() {
         if (!gameRunning) return;
         gameRunning = false;
+
+        // --- Feature 1: Trigger screen shake ---
+        shakeTimer = SHAKE_DURATION;
+        shakeIntensity = SHAKE_MAX_INTENSITY;
+
+        // --- Feature 5: Save best run if this is better ---
+        if (score >= highScore && currentRunPositions.length > 0) {
+          bestRunPositions = currentRunPositions.slice();
+        }
+
+        // --- Feature 15: Update stats ---
+        statsData.totalGames++;
+        statsData.totalScore += score;
+        if (score > statsData.bestStreak) statsData.bestStreak = score;
+        saveStats();
+
         updateHighScore();
         gameOverMessage.style.display = 'block';
+
+        // --- Feature 13: Show medal ---
+        const medal = getMedal(score);
+        const medalDisplay = document.getElementById('medal-display');
+        medalDisplay.innerHTML = '';
+        if (medal) {
+          const span = document.createElement('span');
+          span.style.cssText = `display:inline-block;background:${medal.color};color:#222;font-weight:bold;padding:4px 14px;border-radius:20px;box-shadow:0 0 8px ${medal.glow};margin-bottom:4px;`;
+          span.textContent = `🏅 ${medal.label}`;
+          medalDisplay.appendChild(span);
+        }
+
+        // --- Feature 15: Show stats ---
+        const statsEl = document.getElementById('stats-display');
+        statsEl.innerHTML = `Games: ${statsData.totalGames} | Total Score: ${statsData.totalScore} | Best: ${statsData.bestStreak}`;
+
+        // Reset combo display
+        comboDisplay.innerText = '';
+
         playGameOverSound();
         addScoreToLeaderboard();
         document.getElementById('bottom-controls').style.display = 'flex';
@@ -964,6 +1361,11 @@
         if (e.code === 'KeyM') {
           muted = !muted;
           muteButton.innerText = muted ? '🔇' : '🔊';
+        }
+        // --- Feature 14: FPS toggle ---
+        if (e.code === 'KeyF') {
+          showFPS = !showFPS;
+          fpsCounter.style.display = showFPS ? 'block' : 'none';
         }
       });
 
