@@ -77,6 +77,10 @@
       font-size: 16px;
       max-width: 200px;
     }
+    #start-high-score {
+      font-size: 20px;
+      margin: 5px 0 0 0;
+    }
     /* Reduced start message size and padding */
     #start-message {
       position: absolute;
@@ -100,8 +104,13 @@
       font-size: 36px;
       color: yellow;
       text-shadow: 2px 2px 4px #000;
-      display: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
       z-index: 50;
+    }
+    #achievement-notification.visible {
+      opacity: 1;
     }
     /* Game over sign remains at 40% */
     #game-over {
@@ -197,42 +206,121 @@
       background-color: #27ae60;
       color: white;
     }
+    /* Mute button */
+    #mute-button {
+      position: absolute;
+      top: calc(20px + var(--safe-top));
+      right: calc(70px + var(--safe-right));
+      z-index: 40;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+    }
+    /* 10. Hover/focus styles for buttons */
+    .mode-btn:hover, .difficulty-btn:hover, .skin-btn:hover {
+      filter: brightness(1.2);
+    }
+    .mode-btn:focus, .difficulty-btn:focus, .skin-btn:focus {
+      outline: 2px solid #fff;
+      filter: brightness(1.2);
+    }
+    #game-over button:hover {
+      filter: brightness(1.2);
+      background-color: #2ecc71;
+    }
+    #game-over button:focus {
+      outline: 2px solid #fff;
+      filter: brightness(1.2);
+    }
+    #pause-button:hover, #mute-button:hover {
+      background: rgba(0,0,0,0.7);
+    }
+    #pause-button:focus, #mute-button:focus {
+      outline: 2px solid #fff;
+      background: rgba(0,0,0,0.7);
+    }
+    /* 5. Name input modal */
+    #name-input-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 60;
+    }
+    #name-input-modal.visible {
+      display: flex;
+    }
+    #name-input-modal .modal-content {
+      background: #333;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      color: white;
+    }
+    #name-input-modal input {
+      padding: 8px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      margin: 10px 0;
+      width: 200px;
+    }
+    #name-input-modal button {
+      padding: 8px 20px;
+      font-size: 16px;
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    #name-input-modal button:hover {
+      filter: brightness(1.2);
+    }
   </style>
 </head>
 <body>
   <div id="game-container">
-    <div id="score-display">0</div>
+    <div id="score-display" aria-live="polite">0</div>
     <div id="leaderboard">
       <strong>Leaderboard</strong>
       <div id="leaderboard-list"></div>
     </div>
-    <div id="achievement-notification"></div>
-    <div id="start-message">Tap or press ↑ to Start and Flap!</div>
+    <div id="achievement-notification" aria-live="polite"></div>
+    <div id="start-message">Tap or press ↑ to Start and Flap!<p id="start-high-score"></p></div>
     
     <!-- Bottom Controls: Mode, Difficulty, and Skin Selections -->
     <div id="bottom-controls">
       <div id="mode-selection">
         <h2>Select Mode</h2>
         <div class="mode-buttons">
-          <button id="classic-btn" class="mode-btn selected">Classic</button>
-          <button id="challenge-btn" class="mode-btn">Challenge</button>
+          <button id="classic-btn" class="mode-btn selected" aria-label="Classic mode">Classic</button>
+          <button id="challenge-btn" class="mode-btn" aria-label="Challenge mode">Challenge</button>
         </div>
       </div>
       <div id="difficulty-selection">
         <h2>Select Difficulty</h2>
         <div class="difficulty-buttons">
-          <button id="easy-btn" class="difficulty-btn">Easy</button>
-          <button id="medium-btn" class="difficulty-btn selected">Medium</button>
-          <button id="hard-btn" class="difficulty-btn">Hard</button>
+          <button id="easy-btn" class="difficulty-btn" aria-label="Easy difficulty">Easy</button>
+          <button id="medium-btn" class="difficulty-btn selected" aria-label="Medium difficulty">Medium</button>
+          <button id="hard-btn" class="difficulty-btn" aria-label="Hard difficulty">Hard</button>
         </div>
       </div>
       <div id="skin-selection">
         <h2>Select Dragon Skin</h2>
         <div class="skin-buttons">
-          <button id="red-skin-btn" class="skin-btn selected">Red</button>
-          <button id="blue-skin-btn" class="skin-btn">Blue</button>
-          <button id="green-skin-btn" class="skin-btn">Green</button>
-          <button id="pink-skin-btn" class="skin-btn">Pink</button>
+          <button id="red-skin-btn" class="skin-btn selected" aria-label="Red dragon skin">Red</button>
+          <button id="blue-skin-btn" class="skin-btn" aria-label="Blue dragon skin">Blue</button>
+          <button id="green-skin-btn" class="skin-btn" aria-label="Green dragon skin">Green</button>
+          <button id="pink-skin-btn" class="skin-btn" aria-label="Pink dragon skin">Pink</button>
         </div>
       </div>
     </div>
@@ -241,10 +329,21 @@
       Game Over!
       <div id="final-score">Score: 0</div>
       <div id="high-score">High Score: 0</div>
-      <button id="restart-button">Restart</button>
-      <button id="share-button">Share Score</button>
+      <button id="restart-button" aria-label="Restart game">Restart</button>
+      <button id="share-button" aria-label="Share score">Share Score</button>
     </div>
-    <div id="pause-button">Pause</div>
+    <div id="name-input-modal">
+      <div class="modal-content">
+        <h2>Game Over!</h2>
+        <p>Enter your name for the leaderboard:</p>
+        <input type="text" id="player-name-input" maxlength="20" placeholder="Your name" aria-label="Player name" />
+        <br>
+        <button id="name-submit-btn" aria-label="Submit name">Submit</button>
+        <button id="name-skip-btn" aria-label="Skip name entry">Skip</button>
+      </div>
+    </div>
+    <div id="mute-button" role="button" aria-label="Toggle mute" tabindex="0">🔊</div>
+    <div id="pause-button" role="button" aria-label="Pause game" tabindex="0">Pause</div>
     <canvas id="game-canvas"></canvas>
   </div>
   
@@ -264,12 +363,14 @@
       // --- Sound Effects using Web Audio API ---
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       let audioCtx;
+      let muted = false;
       function ensureAudioCtx() {
         if (!audioCtx) audioCtx = new AudioCtx();
         return audioCtx;
       }
 
       function playFlapSound() {
+        if (muted) return;
         const ctx = ensureAudioCtx();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -285,6 +386,7 @@
       }
 
       function playScoreSound() {
+        if (muted) return;
         const ctx = ensureAudioCtx();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -300,6 +402,7 @@
       }
 
       function playGameOverSound() {
+        if (muted) return;
         const ctx = ensureAudioCtx();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -324,8 +427,14 @@
       const highScoreDisplay = document.getElementById('high-score');
       const restartButton = document.getElementById('restart-button');
       const pauseButton = document.getElementById('pause-button');
+      const muteButton = document.getElementById('mute-button');
       const leaderboardList = document.getElementById('leaderboard-list');
       const achievementNotification = document.getElementById('achievement-notification');
+      const nameInputModal = document.getElementById('name-input-modal');
+      const playerNameInput = document.getElementById('player-name-input');
+      const nameSubmitBtn = document.getElementById('name-submit-btn');
+      const nameSkipBtn = document.getElementById('name-skip-btn');
+      const startHighScore = document.getElementById('start-high-score');
   
       // Mode selection buttons
       const classicBtn = document.getElementById('classic-btn');
@@ -346,10 +455,27 @@
       function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        if (birdInitialized) {
+          bird.x = canvas.width / 4;
+          if (!gameStarted) bird.y = canvas.height / 2;
+        }
       }
+      let birdInitialized = false;
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
   
+      // Named constants
+      const GROUND_HEIGHT = 100;
+      const PARTICLE_COUNT = 20;
+      const PARTICLE_FADE_RATE = 0.02;
+      const CLOUD_COUNT = 3;
+      const DAY_NIGHT_CYCLE_SPEED = 5000;
+      const COUNTDOWN_SECONDS = 3;
+      const TARGET_FRAME_MS = 16.67;
+      const MAX_DT_MULTIPLIER = 3;
+      const LEADERBOARD_MAX_ENTRIES = 10;
+      const DEFAULT_PLAYER_NAME = 'Anonymous';
+
       // Game variables
       const gravity = 0.5;
       const jumpForce = -10;
@@ -370,7 +496,12 @@
       let pipeSpawnRate = selectedDifficulty.pipeSpawnRate;
       let pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
   
-      let highScore = localStorage.getItem('highScore') || 0;
+      let highScore = 0;
+      try {
+        highScore = localStorage.getItem('highScore') || 0;
+      } catch (e) {
+        highScore = 0;
+      }
       highScoreDisplay.innerText = `High Score: ${highScore}`;
   
       let score = 0;
@@ -378,6 +509,8 @@
       let gameRunning = false;
       let lastPipeTime = 0;
       let paused = false;
+      let countdownActive = false;
+      let lastFrameTime = performance.now();
   
       const particles = [];
   
@@ -392,8 +525,8 @@
   
       function showAchievement(message) {
         achievementNotification.innerText = message;
-        achievementNotification.style.display = 'block';
-        setTimeout(() => { achievementNotification.style.display = 'none'; }, 2000);
+        achievementNotification.classList.add('visible');
+        setTimeout(() => { achievementNotification.classList.remove('visible'); }, 2000);
       }
   
       function checkAchievements(currentScore) {
@@ -469,12 +602,11 @@
           ctx.closePath();
           ctx.fill();
         },
-        update() {
-          this.velocity += gravity;
-          this.y += this.velocity;
-          const groundHeight = 100;
-          if (this.y + this.height / 2 > canvas.height - groundHeight) {
-            this.y = canvas.height - groundHeight - this.height / 2;
+        update(dt) {
+          this.velocity += gravity * dt;
+          this.y += this.velocity * dt;
+          if (this.y + this.height / 2 > canvas.height - GROUND_HEIGHT) {
+            this.y = canvas.height - GROUND_HEIGHT - this.height / 2;
             gameOver();
           }
           if (this.y - this.height / 2 < 0) {
@@ -487,26 +619,27 @@
           playFlapSound();
         }
       };
+      birdInitialized = true;
   
       function Pipe(x) {
         this.x = x;
         this.width = basePipeWidth;
         this.scored = false;
-        const minGapY = pipeGap + 100;
-        const maxGapY = canvas.height - pipeGap - 200;
+        const minGapY = pipeGap + GROUND_HEIGHT;
+        const maxGapY = canvas.height - pipeGap - 2 * GROUND_HEIGHT;
         this.gapY = Math.random() * (maxGapY - minGapY) + minGapY;
   
         this.draw = function() {
           ctx.fillStyle = '#75B91A';
           ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
-          ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - 100);
+          ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
           ctx.fillStyle = '#5A9117';
           ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
           ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
         };
   
-        this.update = function() {
-          this.x -= pipeSpeed;
+        this.update = function(dt) {
+          this.x -= pipeSpeed * dt;
           if (!this.scored && this.x + this.width < bird.x) {
             score++;
             scoreDisplay.innerText = score;
@@ -535,15 +668,15 @@
   
       function drawGround() {
         ctx.fillStyle = '#DED895';
-        ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
         ctx.fillStyle = '#755C48';
-        ctx.fillRect(0, canvas.height - 100, canvas.width, 20);
+        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, 20);
       }
   
       function drawBackground() {
         const dayColor = { r: 113, g:197, b:207 };
         const nightColor = { r:0, g:31, b:63 };
-        const t = (Math.sin(Date.now() / 5000) + 1) / 2;
+        const t = (Math.sin(Date.now() / DAY_NIGHT_CYCLE_SPEED) + 1) / 2;
         const r = Math.floor(dayColor.r * t + nightColor.r * (1-t));
         const g = Math.floor(dayColor.g * t + nightColor.g * (1-t));
         const b = Math.floor(dayColor.b * t + nightColor.b * (1-t));
@@ -571,7 +704,7 @@
       ];
   
       function spawnParticles(x, y) {
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
           particles.push({
             x: x,
             y: y,
@@ -583,12 +716,12 @@
         }
       }
   
-      function updateParticles() {
+      function updateParticles(dt) {
         for (let i = particles.length - 1; i >= 0; i--) {
           let p = particles[i];
-          p.x += p.vx;
-          p.y += p.vy;
-          p.alpha -= 0.02;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.alpha -= PARTICLE_FADE_RATE * dt;
           if (
             p.alpha <= 0.05 ||
             (p.x + p.radius < 0) ||
@@ -611,59 +744,103 @@
         });
       }
   
-      function gameLoop() {
+      function gameLoop(timestamp) {
+        if (!timestamp) timestamp = performance.now();
+        const elapsed = timestamp - lastFrameTime;
+        lastFrameTime = timestamp;
+        // Normalize dt to 60fps (16.67ms per frame); clamp to MAX_DT_MULTIPLIER
+        // to prevent physics jumps when the tab is backgrounded or frame drops occur
+        const dt = Math.min(elapsed / TARGET_FRAME_MS, MAX_DT_MULTIPLIER);
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
         if (!paused) {
           if (gameRunning) {
             spawnPipe();
             for (let i = pipes.length - 1; i >= 0; i--) {
-              pipes[i].update();
+              pipes[i].update(dt);
               pipes[i].draw();
               if (pipes[i].x + pipes[i].width < 0) {
                 pipes.splice(i, 1);
               }
             }
-            bird.update();
+            bird.update(dt);
           }
         }
         bird.draw();
         drawGround();
-        updateParticles();
+        updateParticles(dt);
         drawParticles();
         requestAnimationFrame(gameLoop);
       }
   
       function getLeaderboard() {
-        const board = localStorage.getItem('leaderboard');
-        return board ? JSON.parse(board) : [];
+        try {
+          const board = localStorage.getItem('leaderboard');
+          return board ? JSON.parse(board) : [];
+        } catch (e) {
+          return [];
+        }
       }
   
       function setLeaderboard(board) {
-        localStorage.setItem('leaderboard', JSON.stringify(board));
+        try {
+          localStorage.setItem('leaderboard', JSON.stringify(board));
+        } catch (e) {
+          // Storage unavailable
+        }
       }
   
       function updateLeaderboardDisplay() {
         const board = getLeaderboard();
         board.sort((a, b) => b.score - a.score);
+        const top10 = board.slice(0, LEADERBOARD_MAX_ENTRIES);
         leaderboardList.innerHTML = '';
-        board.forEach(entry => {
+        top10.forEach((entry, index) => {
           const div = document.createElement('div');
           div.textContent = `${entry.name}: ${entry.score}`;
+          if (index === 0) {
+            div.style.color = 'gold';
+            div.style.fontWeight = 'bold';
+          }
           leaderboardList.appendChild(div);
         });
       }
   
       function addScoreToLeaderboard() {
         if (score <= 0) return;
-        const playerName = prompt("Game Over! Enter your name for the leaderboard:");
+        nameInputModal.classList.add('visible');
+        playerNameInput.value = '';
+        playerNameInput.focus();
+      }
+
+      function submitLeaderboardEntry(playerName) {
+        nameInputModal.classList.remove('visible');
         if (playerName) {
           const board = getLeaderboard();
           board.push({ name: playerName, score: score });
+          board.sort((a, b) => b.score - a.score);
+          board.splice(LEADERBOARD_MAX_ENTRIES);
           setLeaderboard(board);
           updateLeaderboardDisplay();
         }
       }
+
+      nameSubmitBtn.addEventListener('click', () => {
+        const name = playerNameInput.value.trim();
+        submitLeaderboardEntry(name || DEFAULT_PLAYER_NAME);
+      });
+
+      nameSkipBtn.addEventListener('click', () => {
+        nameInputModal.classList.remove('visible');
+      });
+
+      playerNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const name = playerNameInput.value.trim();
+          submitLeaderboardEntry(name || DEFAULT_PLAYER_NAME);
+        }
+      });
   
       function spawnPipe() {
         if (!gameRunning) return;
@@ -675,12 +852,15 @@
       }
   
       function startCountdown() {
+        if (countdownActive) return;
+        countdownActive = true;
         gameOverMessage.style.display = 'none';
+        nameInputModal.classList.remove('visible');
         document.getElementById('difficulty-selection').style.display = 'none';
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('skin-selection').style.display = 'none';
         startMessage.style.display = 'block';
-        let countdown = 3;
+        let countdown = COUNTDOWN_SECONDS;
         startMessage.innerText = countdown;
         const countdownInterval = setInterval(() => {
           countdown--;
@@ -696,10 +876,12 @@
       function startGame() {
         gameStarted = true;
         gameRunning = true;
+        countdownActive = false;
         score = 0;
         scoreDisplay.innerText = score;
         startMessage.style.display = 'none';
         gameOverMessage.style.display = 'none';
+        document.getElementById('bottom-controls').style.display = 'none';
         bird.y = canvas.height / 2;
         bird.velocity = 0;
         pipes.length = 0;
@@ -707,12 +889,17 @@
         unlockedAchievements.clear();
         updateGameParameters();
         lastPipeTime = Date.now();
+        lastFrameTime = performance.now();
       }
   
       function updateHighScore() {
         if (score > highScore) {
           highScore = score;
-          localStorage.setItem('highScore', highScore);
+          try {
+            localStorage.setItem('highScore', highScore);
+          } catch (e) {
+            // Storage unavailable
+          }
           finalScore.innerText = `Score: ${score} (New High Score!)`;
           highScoreDisplay.innerText = `High Score: ${highScore}`;
         } else {
@@ -728,15 +915,17 @@
         gameOverMessage.style.display = 'block';
         playGameOverSound();
         addScoreToLeaderboard();
+        document.getElementById('bottom-controls').style.display = 'flex';
         document.getElementById('difficulty-selection').style.display = 'block';
         document.getElementById('mode-selection').style.display = 'block';
         document.getElementById('skin-selection').style.display = 'block';
+        startHighScore.innerText = highScore > 0 ? `High Score: ${highScore}` : '';
         spawnParticles(bird.x, bird.y);
       }
   
       canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        if (!gameStarted) {
+        if (!gameStarted && !countdownActive) {
           startCountdown();
         } else if (gameRunning && !paused) {
           bird.flap();
@@ -744,7 +933,7 @@
       });
   
       canvas.addEventListener('click', () => {
-        if (!gameStarted) {
+        if (!gameStarted && !countdownActive) {
           startCountdown();
         } else if (gameRunning && !paused) {
           bird.flap();
@@ -766,78 +955,47 @@
         }
         if (e.code === 'ArrowUp' || e.code === 'KeyW') {
           e.preventDefault();
-          if (!gameStarted) {
+          if (!gameStarted && !countdownActive) {
             startCountdown();
           } else if (gameRunning && !paused) {
             bird.flap();
           }
         }
+        if (e.code === 'KeyM') {
+          muted = !muted;
+          muteButton.innerText = muted ? '🔇' : '🔊';
+        }
+      });
+
+      muteButton.addEventListener('click', () => {
+        muted = !muted;
+        muteButton.innerText = muted ? '🔇' : '🔊';
       });
   
-      classicBtn.addEventListener('click', () => {
-        gameMode = "Classic";
-        classicBtn.classList.add('selected');
-        challengeBtn.classList.remove('selected');
-      });
-  
-      challengeBtn.addEventListener('click', () => {
-        gameMode = "Challenge";
-        challengeBtn.classList.add('selected');
-        classicBtn.classList.remove('selected');
-      });
-  
-      easyBtn.addEventListener('click', () => {
-        selectedDifficulty = difficulties.Easy;
-        easyBtn.classList.add('selected');
-        mediumBtn.classList.remove('selected');
-        hardBtn.classList.remove('selected');
-      });
-  
-      mediumBtn.addEventListener('click', () => {
-        selectedDifficulty = difficulties.Medium;
-        mediumBtn.classList.add('selected');
-        easyBtn.classList.remove('selected');
-        hardBtn.classList.remove('selected');
-      });
-  
-      hardBtn.addEventListener('click', () => {
-        selectedDifficulty = difficulties.Hard;
-        hardBtn.classList.add('selected');
-        easyBtn.classList.remove('selected');
-        mediumBtn.classList.remove('selected');
-      });
-  
-      redSkinBtn.addEventListener('click', () => {
-        selectedSkin = "red";
-        redSkinBtn.classList.add('selected');
-        blueSkinBtn.classList.remove('selected');
-        greenSkinBtn.classList.remove('selected');
-        pinkSkinBtn.classList.remove('selected');
-      });
-  
-      blueSkinBtn.addEventListener('click', () => {
-        selectedSkin = "blue";
-        blueSkinBtn.classList.add('selected');
-        redSkinBtn.classList.remove('selected');
-        greenSkinBtn.classList.remove('selected');
-        pinkSkinBtn.classList.remove('selected');
-      });
-  
-      greenSkinBtn.addEventListener('click', () => {
-        selectedSkin = "green";
-        greenSkinBtn.classList.add('selected');
-        redSkinBtn.classList.remove('selected');
-        blueSkinBtn.classList.remove('selected');
-        pinkSkinBtn.classList.remove('selected');
-      });
-  
-      pinkSkinBtn.addEventListener('click', () => {
-        selectedSkin = "pink";
-        pinkSkinBtn.classList.add('selected');
-        redSkinBtn.classList.remove('selected');
-        blueSkinBtn.classList.remove('selected');
-        greenSkinBtn.classList.remove('selected');
-      });
+      function setupButtonGroup(buttons, callback) {
+        buttons.forEach(({el, value}) => {
+          el.addEventListener('click', () => {
+            buttons.forEach(b => b.el.classList.remove('selected'));
+            el.classList.add('selected');
+            callback(value);
+          });
+        });
+      }
+
+      setupButtonGroup(
+        [{el: classicBtn, value: 'Classic'}, {el: challengeBtn, value: 'Challenge'}],
+        (value) => { gameMode = value; }
+      );
+
+      setupButtonGroup(
+        [{el: easyBtn, value: 'Easy'}, {el: mediumBtn, value: 'Medium'}, {el: hardBtn, value: 'Hard'}],
+        (value) => { selectedDifficulty = difficulties[value]; }
+      );
+
+      setupButtonGroup(
+        [{el: redSkinBtn, value: 'red'}, {el: blueSkinBtn, value: 'blue'}, {el: greenSkinBtn, value: 'green'}, {el: pinkSkinBtn, value: 'pink'}],
+        (value) => { selectedSkin = value; }
+      );
   
       document.getElementById('share-button').addEventListener('click', async () => {
         const shareText = `I scored ${score} in Dragon Flight, and my high score is ${highScore}! Can you beat me?`;
@@ -867,6 +1025,7 @@
         }
       });
   
+      startHighScore.innerText = highScore > 0 ? `High Score: ${highScore}` : '';
       updateLeaderboardDisplay();
       gameLoop();
     });
