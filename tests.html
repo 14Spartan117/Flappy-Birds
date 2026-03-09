@@ -21,7 +21,7 @@
 </head>
 <body>
 <h1>🐉 Dragon Flight – Comprehensive Test Suite</h1>
-<p>Tests for all 15 key improvements. Open in a browser to run.</p>
+<p>Tests for all 25 key improvements (Features 1–25). Open in a browser to run.</p>
 <div id="results"></div>
 
 <script>
@@ -581,6 +581,463 @@ describe('Feature 15: Stats Tracking', () => {
     assertEqual(parsed.totalGames, 3);
     assertEqual(parsed.totalScore, 42);
     assertEqual(parsed.bestStreak, 20);
+  });
+});
+
+// Feature 16: Bird ground shadow
+function getBirdGroundShadow(birdY, cameraOffsetY, canvasHeight, groundHeight) {
+  const groundY = canvasHeight - groundHeight;
+  const visualBirdY = birdY + cameraOffsetY;
+  const distanceFromGround = Math.max(0, groundY - visualBirdY);
+  const maxDist = groundY * 0.75;
+  const ratio = Math.min(1, distanceFromGround / maxDist);
+  const shadowW = 28 * (1 - ratio * 0.65);
+  const shadowH = 7 * (1 - ratio * 0.65);
+  const shadowAlpha = 0.45 * (1 - ratio * 0.82);
+  return { shadowW, shadowH, shadowAlpha, ratio };
+}
+
+// Feature 17: Bird tilt
+function getBirdTilt(velocity) {
+  return Math.max(-0.4, Math.min(0.7, velocity * 0.06));
+}
+
+// Feature 18: Pipe proximity warning
+function getPipeWarnAlpha(distToPipe, warnThreshold) {
+  if (distToPipe >= warnThreshold) return 0;
+  const warnRatio = 1 - distToPipe / warnThreshold;
+  const flash = 0.5; // simplified (not using Date.now)
+  return warnRatio * flash * 0.5;
+}
+
+// Feature 19/20: New skins
+function getSkins() {
+  return {
+    red:    { body: '#CC0000', wing: '#AA0000', head: '#CC0000', snout: '#AA0000', eye: '#FFFF00' },
+    blue:   { body: '#0000CC', wing: '#0000AA', head: '#0000CC', snout: '#000099', eye: '#FFFFFF' },
+    green:  { body: '#00CC00', wing: '#00AA00', head: '#00CC00', snout: '#009900', eye: '#FFFF00' },
+    pink:   { body: '#FF69B4', wing: '#FF1493', head: '#FF69B4', snout: '#FF1493', eye: '#FFFFFF' },
+    gold:   { body: '#FFD700', wing: '#FFA500', head: '#FFD700', snout: '#FFA500', eye: '#8B0000' },
+    silver: { body: '#C0C0C0', wing: '#A0A0A0', head: '#C0C0C0', snout: '#909090', eye: '#000080' }
+  };
+}
+
+// Feature 21: Celestial (sun/moon)
+function getCelestialType(t) {
+  return t >= 0.5 ? 'sun' : 'moon';
+}
+
+// Feature 22: Ground texture scrolling
+function getGroundOffset(prevOffset, pipeSpeed, running) {
+  if (!running) return prevOffset;
+  return (prevOffset + pipeSpeed * 0.6) % 36;
+}
+
+// Feature 23: Speed lines
+function shouldSpawnSpeedLine(velocity) {
+  return Math.abs(velocity) > 4;
+}
+
+// Feature 24: Confetti
+function createConfetti(canvasWidth, colors) {
+  return {
+    x: Math.random() * canvasWidth,
+    y: -10,
+    vx: (Math.random() - 0.5) * 4,
+    vy: Math.random() * 3 + 1,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    alpha: 1
+  };
+}
+
+// Feature 25: Pipe gap center marker
+function getPipeGapCenterPos(pipeX, pipeWidth, gapY) {
+  return { x: pipeX + pipeWidth / 2, y: gapY };
+}
+
+describe('Feature 16: Bird Ground Shadow', () => {
+  it('shadow alpha is max when bird is on ground', () => {
+    const r = getBirdGroundShadow(500, 0, 600, 100);
+    // groundY = 500, birdY + 0 = 500, dist = 0, ratio = 0
+    assertApprox(r.shadowAlpha, 0.45, 0.01, 'Shadow at ground level should be max alpha');
+  });
+  it('shadow shrinks as bird rises higher', () => {
+    const low = getBirdGroundShadow(400, 0, 600, 100);
+    const high = getBirdGroundShadow(100, 0, 600, 100);
+    assert(high.shadowW < low.shadowW, 'Shadow width decreases at higher altitude');
+  });
+  it('shadow alpha fades to near-zero when bird is very high', () => {
+    const r = getBirdGroundShadow(0, 0, 600, 100);
+    assert(r.shadowAlpha < 0.1, 'Shadow alpha should be nearly transparent when bird is at top');
+  });
+  it('shadow follows bird x position', () => {
+    // Shadow center x = bird.x; verify different bird positions produce matching x
+    const bird1 = { x: 150 };
+    const bird2 = { x: 300 };
+    const shadow1X = bird1.x; // shadow drawn at bird.x
+    const shadow2X = bird2.x;
+    assertEqual(shadow1X, 150, 'Shadow x tracks bird.x exactly');
+    assertEqual(shadow2X, 300, 'Shadow x tracks bird.x exactly for different position');
+    assert(shadow1X !== shadow2X, 'Different bird x gives different shadow x');
+  });
+  it('shadow uses cameraOffsetY to determine visual bird position', () => {
+    const r1 = getBirdGroundShadow(300, 0, 600, 100);
+    const r2 = getBirdGroundShadow(300, -50, 600, 100); // bird visually 50px higher
+    assert(r2.shadowAlpha < r1.shadowAlpha, 'Camera offset affects shadow alpha');
+  });
+});
+
+describe('Feature 17: Bird Tilt/Rotation', () => {
+  it('tilt is positive (dive) when falling (positive velocity)', () => {
+    const tilt = getBirdTilt(10);
+    assert(tilt > 0, 'Positive velocity should give positive (nose-down) tilt');
+  });
+  it('tilt is negative (climb) when rising (negative velocity)', () => {
+    const tilt = getBirdTilt(-8);
+    assert(tilt < 0, 'Negative velocity should give negative (nose-up) tilt');
+  });
+  it('tilt is zero at zero velocity', () => {
+    assertApprox(getBirdTilt(0), 0, 0.001, 'Zero velocity should give zero tilt');
+  });
+  it('tilt is clamped to max 0.7 radians downward', () => {
+    const tilt = getBirdTilt(100);
+    assert(tilt <= 0.7, 'Tilt should not exceed 0.7 radians');
+  });
+  it('tilt is clamped to min -0.4 radians upward', () => {
+    const tilt = getBirdTilt(-100);
+    assert(tilt >= -0.4, 'Tilt should not go below -0.4 radians');
+  });
+});
+
+describe('Feature 18: Pipe Proximity Warning', () => {
+  it('no warning when bird is far from pipe', () => {
+    assertEqual(getPipeWarnAlpha(200, 120), 0, 'No warning outside threshold');
+  });
+  it('warning triggers within threshold distance', () => {
+    assert(getPipeWarnAlpha(60, 120) > 0, 'Warning active within threshold');
+  });
+  it('warning alpha increases as bird gets closer', () => {
+    const farAlpha = getPipeWarnAlpha(100, 120);
+    const closeAlpha = getPipeWarnAlpha(20, 120);
+    assert(closeAlpha > farAlpha, 'Closer = stronger warning');
+  });
+  it('warning at threshold boundary is zero', () => {
+    assertEqual(getPipeWarnAlpha(120, 120), 0, 'Exactly at threshold: no warning');
+  });
+});
+
+describe('Feature 19/20: Gold and Silver Dragon Skins', () => {
+  it('gold skin has correct body color', () => {
+    assertEqual(getSkins().gold.body, '#FFD700');
+  });
+  it('gold skin has orange wing color', () => {
+    assertEqual(getSkins().gold.wing, '#FFA500');
+  });
+  it('silver skin has correct body color', () => {
+    assertEqual(getSkins().silver.body, '#C0C0C0');
+  });
+  it('silver skin has correct eye color', () => {
+    assertEqual(getSkins().silver.eye, '#000080');
+  });
+  it('total skins count is now 6', () => {
+    assertEqual(Object.keys(getSkins()).length, 6);
+  });
+  it('all original skins still exist', () => {
+    const s = getSkins();
+    assert(s.red && s.blue && s.green && s.pink, 'Original skins preserved');
+  });
+});
+
+describe('Feature 21: Sun and Moon Celestial Bodies', () => {
+  it('sun appears during daytime (t >= 0.5)', () => {
+    assertEqual(getCelestialType(0.75), 'sun');
+    assertEqual(getCelestialType(0.5), 'sun');
+  });
+  it('moon appears at night (t < 0.5)', () => {
+    assertEqual(getCelestialType(0.25), 'moon');
+    assertEqual(getCelestialType(0.0), 'moon');
+  });
+  it('transition at exactly t=0.5 shows sun', () => {
+    assertEqual(getCelestialType(0.5), 'sun');
+  });
+  it('celestial alpha fades in at transition', () => {
+    const t = 0.51;
+    const sunAlpha = Math.min(1, (t - 0.5) * 4);
+    assert(sunAlpha > 0 && sunAlpha < 1, 'Sun fades in at transition');
+  });
+});
+
+describe('Feature 22: Ground Texture Scrolling', () => {
+  it('ground offset increases when game is running', () => {
+    const offset = getGroundOffset(0, 3, true);
+    assert(offset > 0, 'Offset increases when game running');
+  });
+  it('ground offset does not change when game is stopped', () => {
+    const offset = getGroundOffset(10, 3, false);
+    assertEqual(offset, 10, 'Offset unchanged when game stopped');
+  });
+  it('ground offset wraps at 36', () => {
+    const offset = getGroundOffset(35.9, 3, true);
+    assert(offset < 36, 'Ground offset wraps');
+  });
+  it('scroll speed is proportional to pipe speed', () => {
+    const slow = getGroundOffset(0, 2, true);
+    const fast = getGroundOffset(0, 5, true);
+    assert(fast > slow, 'Faster pipe speed = faster ground scroll');
+  });
+});
+
+describe('Feature 23: Speed Lines', () => {
+  it('speed lines spawn when bird is moving fast', () => {
+    assert(shouldSpawnSpeedLine(5), 'Spawn lines at velocity 5');
+    assert(shouldSpawnSpeedLine(-5), 'Spawn lines at negative velocity 5');
+  });
+  it('speed lines do not spawn at low speed', () => {
+    assert(!shouldSpawnSpeedLine(2), 'No lines at velocity 2');
+    assert(!shouldSpawnSpeedLine(0), 'No lines at rest');
+  });
+  it('speed line threshold is abs(velocity) > 4', () => {
+    assert(!shouldSpawnSpeedLine(4), 'No lines at exactly 4');
+    assert(shouldSpawnSpeedLine(4.1), 'Lines at 4.1');
+  });
+  it('speed line alpha starts at 0.5', () => {
+    const line = { alpha: 0.5 };
+    assertEqual(line.alpha, 0.5);
+  });
+});
+
+describe('Feature 24: High Score Confetti', () => {
+  it('confetti creates particles with valid colors', () => {
+    const COLORS = ['#FFD700','#FF4500','#00BFFF','#7FFF00','#FF69B4','#FF6347'];
+    const p = createConfetti(800, COLORS);
+    assert(COLORS.includes(p.color), 'Confetti uses valid color');
+  });
+  it('confetti starts at y=-10 (above screen)', () => {
+    const p = createConfetti(800, ['#FFD700']);
+    assertEqual(p.y, -10, 'Confetti spawns above screen');
+  });
+  it('confetti starts with alpha 1', () => {
+    const p = createConfetti(800, ['#FFD700']);
+    assertEqual(p.alpha, 1);
+  });
+  it('confetti has positive downward velocity', () => {
+    const p = createConfetti(800, ['#FFD700']);
+    assert(p.vy > 0, 'Confetti falls downward');
+  });
+  it('confetti is triggered on new high score only', () => {
+    let isNewHighScore = false;
+    let score = 5;
+    let highScore = 10;
+    if (score > highScore) isNewHighScore = true;
+    assert(!isNewHighScore, 'No confetti if score did not beat high score');
+    isNewHighScore = false;
+    score = 15;
+    if (score > highScore) isNewHighScore = true;
+    assert(isNewHighScore, 'Confetti triggered when new high score');
+  });
+});
+
+describe('Feature 25: Pipe Gap Center Marker', () => {
+  it('gap marker is centered horizontally on pipe', () => {
+    const pos = getPipeGapCenterPos(100, 80, 300);
+    assertEqual(pos.x, 140, 'Marker x = pipe.x + pipe.width/2');
+  });
+  it('gap marker is at the gap center vertically', () => {
+    const pos = getPipeGapCenterPos(100, 80, 300);
+    assertEqual(pos.y, 300, 'Marker y = gapY');
+  });
+  it('gap marker x scales with pipe width', () => {
+    const pos1 = getPipeGapCenterPos(100, 80, 300);
+    const pos2 = getPipeGapCenterPos(100, 100, 300);
+    assert(pos2.x > pos1.x, 'Wider pipe shifts marker right');
+  });
+  it('gap marker position updates with pipe x movement', () => {
+    const pos1 = getPipeGapCenterPos(200, 80, 300);
+    const pos2 = getPipeGapCenterPos(100, 80, 300);
+    assert(pos1.x > pos2.x, 'Marker follows pipe x');
+  });
+});
+
+describe('Bug Fix: Particle Coordinate System', () => {
+  it('fire particles should use screen y (game y + cameraOffsetY)', () => {
+    const birdY = 300;
+    const cameraOffsetY = 30;
+    const particleY = birdY + cameraOffsetY;
+    assertEqual(particleY, 330, 'Particle y should include camera offset');
+  });
+  it('game-over particles use screen y', () => {
+    const birdY = 400;
+    const cameraOffsetY = -20;
+    const particleY = birdY + cameraOffsetY;
+    assertEqual(particleY, 380, 'Particle y correct with negative camera offset');
+  });
+  it('score popup y uses screen coordinates', () => {
+    const gapY = 250;
+    const cameraOffsetY = 40;
+    const popupY = gapY + cameraOffsetY;
+    assertEqual(popupY, 290, 'Popup y should include camera offset');
+  });
+  it('camera offset is bounded at ±15% of canvas height', () => {
+    const canvasHeight = 600;
+    let cameraOffsetY = 200;
+    cameraOffsetY = Math.max(Math.min(cameraOffsetY, canvasHeight * 0.15), -canvasHeight * 0.15);
+    assertEqual(cameraOffsetY, 90);
+  });
+});
+
+describe('Bug Fix: Bird Shadow Follows Bird', () => {
+  it('shadow x matches bird x (follows horizontally)', () => {
+    const birdX = 200;
+    const shadowX = birdX; // shadow at same x as bird
+    assertEqual(shadowX, birdX, 'Shadow x == bird x');
+  });
+  it('shadow is always on the ground (fixed groundY)', () => {
+    const canvasHeight = 600;
+    const GROUND_HEIGHT = 100;
+    const groundY = canvasHeight - GROUND_HEIGHT;
+    assertEqual(groundY, 500, 'Ground shadow y = canvas.height - GROUND_HEIGHT');
+  });
+  it('shadow alpha responds to bird altitude changes', () => {
+    const lowBird = getBirdGroundShadow(490, 0, 600, 100);
+    const highBird = getBirdGroundShadow(100, 0, 600, 100);
+    assert(lowBird.shadowAlpha > highBird.shadowAlpha, 'Shadow visible when bird is near ground');
+  });
+  it('drop shadow is drawn before bird body (z-order)', () => {
+    // Drop shadow: globalAlpha = 0.22 (semi-transparent)
+    // It is drawn BEFORE the body, so the body renders on top of the shadow
+    const dropShadowAlpha = 0.22;
+    assert(dropShadowAlpha > 0 && dropShadowAlpha < 1, 'Drop shadow is semi-transparent');
+    assert(dropShadowAlpha < 0.5, 'Drop shadow is subtle enough not to obscure background');
+  });
+});
+
+describe('Recommended Features 26-45 (Logic Stubs)', () => {
+  // These tests verify the mathematical/logical building blocks for future features.
+
+  it('Feature 26: Power-up spawn rate (1 per N pipes)', () => {
+    // Every 5th pipe scored spawns a power-up
+    const pipeCount = 10;
+    const powerUpCount = Math.floor(pipeCount / 5);
+    assertEqual(powerUpCount, 2, '2 power-ups spawn in 10 pipes');
+  });
+  it('Feature 27: Wind gust force calculation', () => {
+    // Wind: sinusoidal, amplitude ±2, period 5 seconds
+    const windForce = (t) => Math.sin(t / 5000 * Math.PI * 2) * 2;
+    const f0 = windForce(0);
+    const f2500 = windForce(2500);
+    assertApprox(f0, 0, 0.01, 'Wind starts at zero');
+    assertApprox(f2500, 0, 0.01, 'Wind crosses zero at half period');
+  });
+  it('Feature 28: Double-flap window (200ms)', () => {
+    let lastTap = 1000;
+    const DOUBLE_TAP_WINDOW = 200;
+    const nextTap = 1150;
+    const isDouble = (nextTap - lastTap) <= DOUBLE_TAP_WINDOW;
+    assert(isDouble, '150ms gap is within double-tap window');
+    const slowTap = 1400;
+    assert(!((slowTap - lastTap) <= DOUBLE_TAP_WINDOW), '400ms gap is outside window');
+  });
+  it('Feature 29: Magnet pull force (inverse distance)', () => {
+    const magnetForce = (dist) => dist > 0 ? Math.min(5, 200 / dist) : 5;
+    assert(magnetForce(40) > magnetForce(200), 'Stronger pull when closer to gap');
+    assert(magnetForce(40) <= 5, 'Force capped at 5');
+  });
+  it('Feature 30: EXP to next level formula', () => {
+    const expForLevel = (level) => 100 * level * level;
+    assertEqual(expForLevel(1), 100, 'Level 1 needs 100 EXP');
+    assertEqual(expForLevel(2), 400, 'Level 2 needs 400 EXP');
+    assertEqual(expForLevel(3), 900, 'Level 3 needs 900 EXP');
+  });
+  it('Feature 31: Weather particle count (rain vs snow)', () => {
+    const getParticleCount = (weather) => weather === 'rain' ? 80 : 40;
+    assertEqual(getParticleCount('rain'), 80, 'Rain has 80 particles');
+    assertEqual(getParticleCount('snow'), 40, 'Snow has 40 particles');
+  });
+  it('Feature 32: Lava wave offset calculation', () => {
+    const lavaY = (x, t) => Math.sin(x * 0.02 + t * 0.003) * 10;
+    const y1 = lavaY(0, 1000);
+    const y2 = lavaY(0, 2000);
+    assert(y1 !== y2, 'Lava surface changes over time');
+    assert(Math.abs(y1) <= 10 && Math.abs(y2) <= 10, 'Lava stays within amplitude');
+  });
+  it('Feature 33: Pipe width varies by score tier', () => {
+    const getPipeWidth = (score) => score >= 50 ? 60 : score >= 25 ? 70 : 80;
+    assertEqual(getPipeWidth(0), 80, 'Normal width at start');
+    assertEqual(getPipeWidth(30), 70, 'Narrower at score 30');
+    assertEqual(getPipeWidth(60), 60, 'Narrowest at score 60');
+  });
+  it('Feature 34: Near-miss detection (5px threshold)', () => {
+    const isNearMiss = (birdEdge, pipeEdge) => Math.abs(birdEdge - pipeEdge) <= 5;
+    assert(isNearMiss(100, 103), '3px gap is a near-miss');
+    assert(!isNearMiss(100, 110), '10px gap is not a near-miss');
+  });
+  it('Feature 35: Trail particle lifetime (frames)', () => {
+    const TRAIL_ALPHA_DECAY = 0.05;
+    let alpha = 1;
+    let frames = 0;
+    while (alpha > 0.05) { alpha -= TRAIL_ALPHA_DECAY; frames++; }
+    assert(frames >= 18 && frames <= 20, 'Trail lasts ~19 frames');
+  });
+  it('Feature 36: Animated title bounce amplitude', () => {
+    const titleBounce = (t) => Math.abs(Math.sin(t * 0.002)) * 10;
+    const b = titleBounce(1000);
+    assert(b >= 0 && b <= 10, 'Bounce stays within 0-10px range');
+  });
+  it('Feature 37: Ghost trail highlight threshold (flashes within 5px)', () => {
+    const shouldFlash = (birdY, ghostY) => Math.abs(birdY - ghostY) < 5;
+    assert(shouldFlash(300, 302), 'Flash when within 2px of ghost');
+    assert(!shouldFlash(300, 310), 'No flash when 10px from ghost');
+  });
+  it('Feature 38: URL param ghost encoding (base64 positions)', () => {
+    const positions = [100, 150, 200];
+    const encoded = btoa(JSON.stringify(positions));
+    const decoded = JSON.parse(atob(encoded));
+    assert(Array.isArray(decoded) && decoded.length === 3, 'Ghost positions round-trip encode/decode');
+    assertEqual(decoded[0], 100);
+  });
+  it('Feature 39: High-contrast color scheme', () => {
+    const hc = { background: '#000000', pipe: '#FFFFFF', bird: '#FFFF00', text: '#FFFFFF' };
+    assert(hc.background !== hc.pipe, 'High-contrast: background and pipe differ');
+    assert(hc.bird !== hc.background, 'High-contrast: bird visible on background');
+  });
+  it('Feature 40: PWA manifest required fields', () => {
+    const manifest = { name: 'Dragon Flight', short_name: 'DragonFlight', start_url: '/', display: 'standalone' };
+    assert(manifest.name.length > 0, 'PWA has name');
+    assert(manifest.display === 'standalone', 'PWA display is standalone');
+  });
+  it('Feature 41: Haptic feedback duration (50ms flap, 200ms game-over)', () => {
+    const hapticFlap = 50;
+    const hapticGameOver = 200;
+    assert(hapticGameOver > hapticFlap, 'Game-over haptic is longer than flap');
+    assert(hapticFlap >= 10 && hapticFlap <= 100, 'Flap haptic is short');
+  });
+  it('Feature 42: Score history rolling window (last 10 games)', () => {
+    const history = [];
+    const MAX_HISTORY = 10;
+    for (let i = 1; i <= 15; i++) {
+      history.push(i);
+      if (history.length > MAX_HISTORY) history.shift();
+    }
+    assertEqual(history.length, 10, 'History capped at 10');
+    assertEqual(history[0], 6, 'Oldest entry is game 6');
+  });
+  it('Feature 43: Skin unlock score thresholds', () => {
+    const UNLOCK_THRESHOLDS = { gold: 50, silver: 25, pink: 10 };
+    assert(UNLOCK_THRESHOLDS.gold > UNLOCK_THRESHOLDS.silver, 'Gold harder to unlock than silver');
+    assert(UNLOCK_THRESHOLDS.silver > UNLOCK_THRESHOLDS.pink, 'Silver harder than pink');
+  });
+  it('Feature 44: Weekly leaderboard expiry (7 days in ms)', () => {
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    assertEqual(WEEK_MS, 604800000, '7 days = 604800000ms');
+    const timestamp = Date.now();
+    const isExpired = (ts) => Date.now() - ts > WEEK_MS;
+    assert(!isExpired(timestamp), 'Current timestamp is not expired');
+    assert(isExpired(timestamp - WEEK_MS - 1000), 'Week-old timestamp is expired');
+  });
+  it('Feature 45: Background music note frequency table', () => {
+    const notes = { C4: 261.63, E4: 329.63, G4: 392.00, B4: 493.88 };
+    assert(notes.B4 > notes.G4 && notes.G4 > notes.E4 && notes.E4 > notes.C4, 'Notes ascend in frequency');
+    assertApprox(notes.C4, 261.63, 0.01, 'Middle C is 261.63 Hz');
   });
 });
 

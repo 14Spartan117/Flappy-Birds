@@ -356,6 +356,8 @@
           <button id="blue-skin-btn" class="skin-btn" aria-label="Blue dragon skin">Blue</button>
           <button id="green-skin-btn" class="skin-btn" aria-label="Green dragon skin">Green</button>
           <button id="pink-skin-btn" class="skin-btn" aria-label="Pink dragon skin">Pink</button>
+          <button id="gold-skin-btn" class="skin-btn" aria-label="Gold dragon skin">Gold</button>
+          <button id="silver-skin-btn" class="skin-btn" aria-label="Silver dragon skin">Silver</button>
         </div>
       </div>
     </div>
@@ -487,6 +489,8 @@
       const blueSkinBtn = document.getElementById('blue-skin-btn');
       const greenSkinBtn = document.getElementById('green-skin-btn');
       const pinkSkinBtn = document.getElementById('pink-skin-btn');
+      const goldSkinBtn = document.getElementById('gold-skin-btn');
+      const silverSkinBtn = document.getElementById('silver-skin-btn');
   
       // Set canvas size
       function resizeCanvas() {
@@ -609,6 +613,84 @@
       }
 
       const particles = [];
+
+      // --- Feature 24: Confetti for high score ---
+      const confettiParticles = [];
+      const CONFETTI_COLORS = ['#FFD700','#FF4500','#00BFFF','#7FFF00','#FF69B4','#FF6347'];
+      function spawnConfetti() {
+        for (let i = 0; i < 60; i++) {
+          confettiParticles.push({
+            x: Math.random() * canvas.width,
+            y: -10,
+            vx: (Math.random() - 0.5) * 4,
+            vy: Math.random() * 3 + 1,
+            width: Math.random() * 10 + 5,
+            height: Math.random() * 6 + 3,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.2,
+            color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+            alpha: 1
+          });
+        }
+      }
+      function updateConfetti(dt) {
+        for (let i = confettiParticles.length - 1; i >= 0; i--) {
+          const p = confettiParticles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.rotation += p.rotSpeed * dt;
+          p.alpha -= 0.008 * dt;
+          if (p.alpha <= 0 || p.y > canvas.height + 20) confettiParticles.splice(i, 1);
+        }
+      }
+      function drawConfetti() {
+        confettiParticles.forEach(p => {
+          if (p.alpha <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.fillRect(-p.width / 2, -p.height / 2, p.width, p.height);
+          ctx.restore();
+        });
+      }
+
+      // --- Feature 23: Speed lines behind bird ---
+      const speedLines = [];
+      function updateSpeedLines(dt) {
+        if (gameRunning && Math.abs(bird.velocity) > 4) {
+          for (let i = 0; i < 2; i++) {
+            speedLines.push({
+              x: bird.x - 20 + (Math.random() - 0.5) * bird.width,
+              y: bird.y + cameraOffsetY + (Math.random() - 0.5) * bird.height,
+              length: Math.random() * 20 + 10,
+              alpha: 0.5,
+              speed: Math.random() * 2 + 2
+            });
+          }
+        }
+        for (let i = speedLines.length - 1; i >= 0; i--) {
+          const l = speedLines[i];
+          l.x -= l.speed * dt;
+          l.alpha -= 0.06 * dt;
+          if (l.alpha <= 0) speedLines.splice(i, 1);
+        }
+      }
+      function drawSpeedLines() {
+        speedLines.forEach(l => {
+          if (l.alpha <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = l.alpha;
+          ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(l.x, l.y);
+          ctx.lineTo(l.x - l.length, l.y);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
   
       const achievements = [
         { score: 1, message: "First Flap!" },
@@ -635,10 +717,12 @@
       }
   
       const skins = {
-        red: { body: '#CC0000', wing: '#AA0000', head: '#CC0000', snout: '#AA0000', eye: '#FFFF00' },
-        blue: { body: '#0000CC', wing: '#0000AA', head: '#0000CC', snout: '#000099', eye: '#FFFFFF' },
-        green: { body: '#00CC00', wing: '#00AA00', head: '#00CC00', snout: '#009900', eye: '#FFFF00' },
-        pink: { body: '#FF69B4', wing: '#FF1493', head: '#FF69B4', snout: '#FF1493', eye: '#FFFFFF' }
+        red:    { body: '#CC0000', wing: '#AA0000', head: '#CC0000', snout: '#AA0000', eye: '#FFFF00' },
+        blue:   { body: '#0000CC', wing: '#0000AA', head: '#0000CC', snout: '#000099', eye: '#FFFFFF' },
+        green:  { body: '#00CC00', wing: '#00AA00', head: '#00CC00', snout: '#009900', eye: '#FFFF00' },
+        pink:   { body: '#FF69B4', wing: '#FF1493', head: '#FF69B4', snout: '#FF1493', eye: '#FFFFFF' },
+        gold:   { body: '#FFD700', wing: '#FFA500', head: '#FFD700', snout: '#FFA500', eye: '#8B0000' },
+        silver: { body: '#C0C0C0', wing: '#A0A0A0', head: '#C0C0C0', snout: '#909090', eye: '#000080' }
       };
   
       const bird = {
@@ -655,56 +739,76 @@
           const wUp = wingAngle - wingSin;   // upper wing offset
           const wDn = wingAngle + wingSin;   // lower wing offset
 
-          // Draw body
+          // --- Feature 17: Bird tilt/rotation based on velocity ---
+          const tiltAngle = Math.max(-0.4, Math.min(0.7, this.velocity * 0.06));
+
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(tiltAngle);
+
+          // --- Feature 16: Drop shadow under bird (drawn before body) ---
+          if (!ghost) {
+            ctx.save();
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.ellipse(4, 6, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // Draw body (centered at 0,0 in rotated space)
           ctx.fillStyle = skin.body;
           ctx.beginPath();
-          ctx.ellipse(this.x, this.y, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
+          ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2);
           ctx.fill();
           // Draw wings (animated)
           ctx.fillStyle = skin.wing;
           ctx.beginPath();
-          ctx.moveTo(this.x, this.y - 5);
-          ctx.lineTo(this.x - 20, this.y - 30 + wUp * 20);
-          ctx.lineTo(this.x - 5, this.y - 15 + wUp * 10);
+          ctx.moveTo(0, -5);
+          ctx.lineTo(-20, -30 + wUp * 20);
+          ctx.lineTo(-5, -15 + wUp * 10);
           ctx.closePath();
           ctx.fill();
           ctx.beginPath();
-          ctx.moveTo(this.x, this.y + 5);
-          ctx.lineTo(this.x - 20, this.y + 25 + wDn * 20);
-          ctx.lineTo(this.x - 5, this.y + 15 + wDn * 10);
+          ctx.moveTo(0, 5);
+          ctx.lineTo(-20, 25 + wDn * 20);
+          ctx.lineTo(-5, 15 + wDn * 10);
           ctx.closePath();
           ctx.fill();
           // Draw head and eye
           ctx.fillStyle = skin.head;
           ctx.beginPath();
-          ctx.arc(this.x + 15, this.y - 5, 12, 0, Math.PI * 2);
+          ctx.arc(15, -5, 12, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = skin.eye;
           ctx.beginPath();
-          ctx.arc(this.x + 18, this.y - 8, 4, 0, Math.PI * 2);
+          ctx.arc(18, -8, 4, 0, Math.PI * 2);
           ctx.fill();
           if (!ghost) {
             ctx.fillStyle = '#000000';
             ctx.beginPath();
-            ctx.arc(this.x + 18, this.y - 8, 2, 0, Math.PI * 2);
+            ctx.arc(18, -8, 2, 0, Math.PI * 2);
             ctx.fill();
           }
           // Draw snout
           ctx.fillStyle = skin.snout;
           ctx.beginPath();
-          ctx.moveTo(this.x + 25, this.y - 5);
-          ctx.lineTo(this.x + 40, this.y);
-          ctx.lineTo(this.x + 25, this.y + 3);
+          ctx.moveTo(25, -5);
+          ctx.lineTo(40, 0);
+          ctx.lineTo(25, 3);
           ctx.closePath();
           ctx.fill();
           // Draw tail
           ctx.fillStyle = skin.snout;
           ctx.beginPath();
-          ctx.moveTo(this.x - 20, this.y);
-          ctx.lineTo(this.x - 35, this.y - 10);
-          ctx.lineTo(this.x - 35, this.y + 10);
+          ctx.moveTo(-20, 0);
+          ctx.lineTo(-35, -10);
+          ctx.lineTo(-35, 10);
           ctx.closePath();
           ctx.fill();
+
+          ctx.restore();
         },
         update(dt) {
           this.velocity += gravity * dt;
@@ -743,12 +847,45 @@
 
         this.draw = function() {
           const colors = getPipeColor(score);
-          ctx.fillStyle = colors.body;
-          ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
-          ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
-          ctx.fillStyle = colors.cap;
-          ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
-          ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
+          // --- Feature 18: Pipe proximity warning ---
+          const distToPipe = Math.abs(bird.x - (this.x + this.width / 2));
+          const warnThreshold = 120;
+          let bodyColor = colors.body;
+          let capColor = colors.cap;
+          if (distToPipe < warnThreshold && gameRunning) {
+            const warnRatio = 1 - distToPipe / warnThreshold;
+            const flash = Math.sin(Date.now() * 0.015) * 0.5 + 0.5;
+            const warnAlpha = warnRatio * flash * 0.5;
+            ctx.save();
+            ctx.fillStyle = colors.body;
+            ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
+            ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
+            ctx.fillStyle = colors.cap;
+            ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
+            ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
+            ctx.globalAlpha = warnAlpha;
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
+            ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
+            ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
+            ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
+            ctx.restore();
+          } else {
+            ctx.fillStyle = bodyColor;
+            ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
+            ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
+            ctx.fillStyle = capColor;
+            ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
+            ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
+          }
+          // --- Feature 25: Pipe gap center marker ---
+          ctx.save();
+          ctx.globalAlpha = 0.35;
+          ctx.fillStyle = 'rgba(255,255,255,0.6)';
+          ctx.beginPath();
+          ctx.arc(this.x + this.width / 2, this.gapY, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         };
 
         this.update = function(dt) {
@@ -784,7 +921,7 @@
             // --- Feature 6: Floating score popup ---
             scorePopups.push({
               x: this.x + this.width / 2,
-              y: this.gapY,
+              y: this.gapY + cameraOffsetY,
               text: multiplier > 1 ? `+${multiplier}` : '+1',
               alpha: 1,
               vy: -1.5
@@ -800,7 +937,7 @@
             }
 
             // --- Feature 8: Dragon fire breathing ---
-            spawnFireParticles(bird.x + 40, bird.y);
+            spawnFireParticles(bird.x + 40, bird.y + cameraOffsetY);
 
             checkAchievements(score);
             playScoreSound();
@@ -851,6 +988,42 @@
           });
         }
 
+        // --- Feature 21: Sun and Moon celestial body ---
+        const celestialX = canvas.width * 0.85;
+        if (t >= 0.5) {
+          // Sun (daytime)
+          const sunAlpha = Math.min(1, (t - 0.5) * 4);
+          ctx.save();
+          ctx.globalAlpha = sunAlpha;
+          ctx.fillStyle = '#FFD700';
+          ctx.beginPath();
+          ctx.arc(celestialX, canvas.height * 0.15, 28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,220,0,0.35)';
+          ctx.beginPath();
+          ctx.arc(celestialX, canvas.height * 0.15, 42, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else {
+          // Moon (nighttime)
+          const moonAlpha = Math.min(1, (0.5 - t) * 4);
+          ctx.save();
+          ctx.globalAlpha = moonAlpha;
+          ctx.fillStyle = '#FFFDE7';
+          ctx.beginPath();
+          ctx.arc(celestialX, canvas.height * 0.15, 22, 0, Math.PI * 2);
+          ctx.fill();
+          // Crater detail
+          ctx.fillStyle = 'rgba(200,200,160,0.5)';
+          ctx.beginPath();
+          ctx.arc(celestialX + 6, canvas.height * 0.15 - 5, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(celestialX - 7, canvas.height * 0.15 + 6, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
         // --- Feature 7: Parallax — distant mountains ---
         if (gameRunning) parallaxOffset1 = (parallaxOffset1 + 0.3) % canvas.width;
         const mtnY = canvas.height - GROUND_HEIGHT - 120;
@@ -892,13 +1065,20 @@
       }
 
       // --- Feature 12: Animated ground with grass blades ---
+      // --- Feature 22: Ground texture scrolling ---
       let grassTimer = 0;
       function drawGround() {
         grassTimer += 0.03;
+        if (gameRunning) groundOffset = (groundOffset + pipeSpeed * 0.6) % 36;
         ctx.fillStyle = '#DED895';
         ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
         ctx.fillStyle = '#755C48';
         ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, 20);
+        // Scrolling dirt stripe
+        ctx.fillStyle = 'rgba(100,70,40,0.25)';
+        for (let dx = -groundOffset; dx < canvas.width + 36; dx += 36) {
+          ctx.fillRect(dx, canvas.height - GROUND_HEIGHT, 18, 6);
+        }
         // Grass blades
         const bladeSpacing = 18;
         const groundTop = canvas.height - GROUND_HEIGHT;
@@ -913,6 +1093,27 @@
           ctx.closePath();
           ctx.fill();
         }
+      }
+
+      // --- Feature 16: Bird Ground Shadow (projected onto ground) ---
+      function drawBirdGroundShadow() {
+        const groundY = canvas.height - GROUND_HEIGHT;
+        // Visual y of bird = game y + cameraOffsetY (bird drawn inside camera transform)
+        const visualBirdY = bird.y + cameraOffsetY;
+        const distanceFromGround = Math.max(0, groundY - visualBirdY);
+        const maxDist = groundY * 0.75;
+        const ratio = Math.min(1, distanceFromGround / maxDist);
+        const shadowW = 28 * (1 - ratio * 0.65);
+        const shadowH = 7 * (1 - ratio * 0.65);
+        const shadowAlpha = 0.45 * (1 - ratio * 0.82);
+        if (shadowAlpha <= 0.01) return;
+        ctx.save();
+        ctx.globalAlpha = shadowAlpha;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(bird.x, groundY - 4, shadowW, shadowH, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
   
       let clouds = [
@@ -1108,14 +1309,23 @@
         bird.draw(false);
         ctx.restore(); // pop camera transform
 
+        // --- Feature 16: Bird ground shadow (drawn before ground so ground overlaps edges) ---
+        drawBirdGroundShadow();
+
         drawGround();
 
         updateParticles(dt);
         drawParticles();
         updateFireParticles(dt);
         drawFireParticles();
+        // --- Feature 23: Speed lines ---
+        updateSpeedLines(dt);
+        drawSpeedLines();
         updateScorePopups(dt);
         drawScorePopups();
+        // --- Feature 24: Confetti ---
+        updateConfetti(dt);
+        drawConfetti();
 
         ctx.restore(); // pop shake transform
         requestAnimationFrame(gameLoop);
@@ -1235,6 +1445,8 @@
         particles.length = 0;
         scorePopups.length = 0;
         fireParticles.length = 0;
+        confettiParticles.length = 0;
+        speedLines.length = 0;
         unlockedAchievements.clear();
         comboCount = 0;
         comboDisplay.innerText = '';
@@ -1279,6 +1491,7 @@
         shakeIntensity = SHAKE_MAX_INTENSITY;
 
         // --- Feature 5: Save best run if this is better ---
+        const isNewHighScore = score > highScore;
         if (score >= highScore && currentRunPositions.length > 0) {
           bestRunPositions = currentRunPositions.slice();
         }
@@ -1317,7 +1530,9 @@
         document.getElementById('mode-selection').style.display = 'block';
         document.getElementById('skin-selection').style.display = 'block';
         startHighScore.innerText = highScore > 0 ? `High Score: ${highScore}` : '';
-        spawnParticles(bird.x, bird.y);
+        spawnParticles(bird.x, bird.y + cameraOffsetY);
+        // --- Feature 24: Celebrate new high score with confetti ---
+        if (isNewHighScore && score > 0) spawnConfetti();
       }
   
       canvas.addEventListener('touchstart', (e) => {
@@ -1395,7 +1610,7 @@
       );
 
       setupButtonGroup(
-        [{el: redSkinBtn, value: 'red'}, {el: blueSkinBtn, value: 'blue'}, {el: greenSkinBtn, value: 'green'}, {el: pinkSkinBtn, value: 'pink'}],
+        [{el: redSkinBtn, value: 'red'}, {el: blueSkinBtn, value: 'blue'}, {el: greenSkinBtn, value: 'green'}, {el: pinkSkinBtn, value: 'pink'}, {el: goldSkinBtn, value: 'gold'}, {el: silverSkinBtn, value: 'silver'}],
         (value) => { selectedSkin = value; }
       );
   
