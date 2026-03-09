@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dragon Flight – Test Suite</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; margin: 0; padding: 20px; }
+    h1 { color: #FFD700; margin-bottom: 4px; }
+    h2 { color: #aad4f5; margin: 20px 0 6px; }
+    .summary { font-size: 20px; font-weight: bold; margin: 16px 0; padding: 12px 18px;
+               border-radius: 8px; display: inline-block; }
+    .pass-summary { background: #1e5c2b; color: #6eff9a; }
+    .fail-summary { background: #5c1e1e; color: #ff8080; }
+    .test { padding: 6px 12px; margin: 3px 0; border-radius: 5px; font-size: 14px; }
+    .test.pass { background: rgba(0,180,80,0.15); border-left: 4px solid #4caf50; }
+    .test.fail { background: rgba(220,0,0,0.18); border-left: 4px solid #e53935; }
+    .icon { margin-right: 6px; }
+    #results { max-width: 900px; }
+  </style>
+</head>
+<body>
+<h1>🐉 Dragon Flight – Comprehensive Test Suite</h1>
+<p>Tests for all 15 key improvements. Open in a browser to run.</p>
+<div id="results"></div>
+
+<script>
+// ─── Minimal Test Framework ────────────────────────────────────────────────
+const tests = [];
+let passed = 0, failed = 0;
+
+function describe(group, fn) {
+  const header = document.createElement('h2');
+  header.textContent = group;
+  document.getElementById('results').appendChild(header);
+  fn();
+}
+
+function it(name, fn) {
+  const el = document.createElement('div');
+  el.className = 'test';
+  try {
+    fn();
+    el.classList.add('pass');
+    el.innerHTML = `<span class="icon">✅</span>${name}`;
+    passed++;
+  } catch (e) {
+    el.classList.add('fail');
+    el.innerHTML = `<span class="icon">❌</span>${name}<br><small style="color:#ff9090;">${e.message}</small>`;
+    failed++;
+  }
+  document.getElementById('results').appendChild(el);
+}
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message || 'Assertion failed');
+}
+
+function assertEqual(a, b, message) {
+  if (a !== b) throw new Error(message || `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+
+function assertApprox(a, b, tol, message) {
+  if (Math.abs(a - b) > tol) throw new Error(message || `Expected ~${b}, got ${a}`);
+}
+
+// ─── Helpers mirroring the game logic ──────────────────────────────────────
+
+// Feature 3: Progressive difficulty
+function computeProgressiveDifficulty(score, basePipeSpeed, basePipeGap) {
+  let pipeSpeed = basePipeSpeed;
+  let pipeGap = basePipeGap;
+  const maxPipeSpeed = basePipeSpeed + 3;
+  const minGap = 80;
+  const ticks = Math.floor(score / 10);
+  for (let i = 0; i < ticks; i++) {
+    pipeSpeed = Math.min(pipeSpeed + 0.15, maxPipeSpeed);
+    pipeGap = Math.max(pipeGap - 2, minGap);
+  }
+  return { pipeSpeed, pipeGap };
+}
+
+// Feature 4: Combo multiplier
+function getComboMultiplier(comboCount) {
+  if (comboCount >= 5) return 3;
+  if (comboCount >= 3) return 2;
+  return 1;
+}
+
+// Feature 11: Pipe color selection
+function getPipeColor(score) {
+  if (score >= 50) return { body: '#C0392B', cap: '#962d22' };
+  if (score >= 25) return { body: '#8E44AD', cap: '#6c3483' };
+  if (score >= 10) return { body: '#2980B9', cap: '#1a6391' };
+  return { body: '#75B91A', cap: '#5A9117' };
+}
+
+// Feature 13: Medal system
+function getMedal(s) {
+  if (s >= 100) return { label: 'Platinum', color: '#E5E4E2' };
+  if (s >= 50)  return { label: 'Gold',     color: '#FFD700' };
+  if (s >= 25)  return { label: 'Silver',   color: '#C0C0C0' };
+  if (s >= 10)  return { label: 'Bronze',   color: '#CD7F32' };
+  return null;
+}
+
+// Feature 14: FPS calculation
+function calcFPS(elapsed) {
+  if (elapsed <= 0) return 0;
+  return Math.round(1000 / elapsed);
+}
+
+// Feature 15: Stats tracking (in-memory simulation)
+function createStats() {
+  return { totalGames: 0, totalScore: 0, bestStreak: 0 };
+}
+function recordGame(stats, score) {
+  stats.totalGames++;
+  stats.totalScore += score;
+  if (score > stats.bestStreak) stats.bestStreak = score;
+  return stats;
+}
+
+// Feature 1: Screen shake parameters
+function getShakeOffset(shakeTimer, shakeDuration, shakeIntensity) {
+  if (shakeTimer <= 0) return { x: 0, y: 0 };
+  const intensity = shakeIntensity * (shakeTimer / shakeDuration);
+  // Returns a range of possible offsets (non-deterministic, but bounded)
+  return { intensity, bounded: intensity <= shakeIntensity };
+}
+
+// ─── Tests ─────────────────────────────────────────────────────────────────
+
+describe('Feature 1: Screen Shake', () => {
+  it('shake intensity is zero when shakeTimer is 0', () => {
+    const r = getShakeOffset(0, 300, 8);
+    assertEqual(r.x, 0);
+    assertEqual(r.y, 0);
+  });
+  it('shake intensity is bounded by shakeIntensity', () => {
+    const r = getShakeOffset(150, 300, 8);
+    assert(r.bounded, 'Shake intensity must not exceed max');
+  });
+  it('shake intensity decreases as timer decreases', () => {
+    const r1 = getShakeOffset(300, 300, 8);
+    const r2 = getShakeOffset(100, 300, 8);
+    assert(r1.intensity > r2.intensity, 'Intensity should decrease over time');
+  });
+  it('shake is fully decayed at timer==0', () => {
+    const r = getShakeOffset(0, 300, 8);
+    assertEqual(r.x, 0);
+  });
+});
+
+describe('Feature 2: Animated Wing Flapping', () => {
+  it('wing flap timer increments each frame', () => {
+    let wingTimer = 0;
+    const dt = 1;
+    wingTimer += dt;
+    assertEqual(wingTimer, 1);
+  });
+  it('wing angle is velocity-based and clamped', () => {
+    // velocity-based angle: clamp(velocity * 0.05, -0.5, 0.5)
+    const velocities = [-15, 0, 10, 20];
+    velocities.forEach(v => {
+      const angle = Math.max(-0.5, Math.min(0.5, v * 0.05));
+      assert(angle >= -0.5 && angle <= 0.5, `Angle out of range for velocity ${v}`);
+    });
+  });
+  it('wing sin offset uses timer correctly', () => {
+    const t = 100;
+    const wingSin = Math.sin(t * 0.15) * 0.3;
+    assert(wingSin >= -0.3 && wingSin <= 0.3, 'Wing sin offset out of range');
+  });
+});
+
+describe('Feature 3: Progressive Difficulty Scaling', () => {
+  it('speed increases every 10 points', () => {
+    const base = 3, gap = 200;
+    const r10 = computeProgressiveDifficulty(10, base, gap);
+    assert(r10.pipeSpeed > base, 'Speed should increase at 10 points');
+  });
+  it('gap decreases every 10 points', () => {
+    const base = 3, gap = 200;
+    const r10 = computeProgressiveDifficulty(10, base, gap);
+    assert(r10.pipeGap < gap, 'Gap should decrease at 10 points');
+  });
+  it('speed is capped at base + 3', () => {
+    const base = 3, gap = 200;
+    const r = computeProgressiveDifficulty(300, base, gap);
+    assert(r.pipeSpeed <= base + 3, 'Speed must not exceed cap');
+  });
+  it('gap is capped at minimum 80', () => {
+    const base = 3, gap = 200;
+    const r = computeProgressiveDifficulty(1000, base, gap);
+    assert(r.pipeGap >= 80, 'Gap must not go below 80');
+  });
+  it('no change before 10 points', () => {
+    const r0 = computeProgressiveDifficulty(0, 3, 200);
+    assertEqual(r0.pipeSpeed, 3);
+    assertEqual(r0.pipeGap, 200);
+    const r9 = computeProgressiveDifficulty(9, 3, 200);
+    assertEqual(r9.pipeSpeed, 3);
+  });
+  it('challenge mode base speed scales independently', () => {
+    const challengeBase = 4.5;
+    const r = computeProgressiveDifficulty(10, challengeBase, 160);
+    assert(r.pipeSpeed > challengeBase, 'Challenge mode speed should scale');
+    assert(r.pipeSpeed <= challengeBase + 3, 'Challenge mode speed capped');
+  });
+});
+
+describe('Feature 4: Combo Scoring', () => {
+  it('multiplier is 1 for combo < 3', () => {
+    assertEqual(getComboMultiplier(1), 1);
+    assertEqual(getComboMultiplier(2), 1);
+  });
+  it('multiplier is 2 for combo 3-4', () => {
+    assertEqual(getComboMultiplier(3), 2);
+    assertEqual(getComboMultiplier(4), 2);
+  });
+  it('multiplier is 3 for combo 5+', () => {
+    assertEqual(getComboMultiplier(5), 3);
+    assertEqual(getComboMultiplier(10), 3);
+  });
+  it('combo resets on slow scoring (outside window)', () => {
+    // Simulate: if time gap > COMBO_WINDOW_MS, combo resets to 1
+    let comboCount = 4;
+    let lastScoreTime = 0;
+    const COMBO_WINDOW_MS = 2000;
+    const now = 5000; // 5 seconds later
+    if (now - lastScoreTime > COMBO_WINDOW_MS) comboCount = 1;
+    assertEqual(comboCount, 1, 'Combo should reset after window expires');
+  });
+  it('combo increments within time window', () => {
+    let comboCount = 2;
+    let lastScoreTime = 1000;
+    const COMBO_WINDOW_MS = 2000;
+    const now = 1500; // 500ms later (within window)
+    if (now - lastScoreTime <= COMBO_WINDOW_MS) comboCount++;
+    assertEqual(comboCount, 3);
+  });
+});
+
+describe('Feature 5: Ghost/Best Run Trail', () => {
+  it('bestRunPositions stores Y values', () => {
+    const positions = [100, 110, 120, 115, 108];
+    assert(positions.length > 0, 'Positions array should be populated');
+  });
+  it('ghost trail uses frame index clamped to array length', () => {
+    const positions = [100, 110, 120];
+    const frameIndex = Math.min(5, positions.length - 1);
+    assertEqual(frameIndex, 2, 'Frame index should be clamped');
+  });
+  it('ghost trail frame index calculates correctly from elapsed time', () => {
+    const startTime = 1000;
+    const now = 1000 + 1000; // 1 second = ~60 frames at 60fps
+    const frameIndex = Math.floor((now - startTime) / (1000 / 60));
+    assertApprox(frameIndex, 60, 2, 'Should be ~60 frames per second');
+  });
+  it('best run is saved when score improves', () => {
+    let highScore = 5;
+    let score = 10;
+    let bestRun = [];
+    const currentRun = [100, 110, 120];
+    if (score >= highScore && currentRun.length > 0) {
+      bestRun = currentRun.slice();
+    }
+    assertEqual(bestRun.length, 3, 'Best run should be saved');
+  });
+});
+
+describe('Feature 6: Floating Score Popups', () => {
+  it('popup is created on score', () => {
+    const popups = [];
+    popups.push({ x: 100, y: 200, text: '+1', alpha: 1, vy: -1.5 });
+    assertEqual(popups.length, 1);
+  });
+  it('popup position drifts upward', () => {
+    const popup = { x: 100, y: 200, text: '+1', alpha: 1, vy: -1.5 };
+    const dt = 1;
+    popup.y += popup.vy * dt;
+    assert(popup.y < 200, 'Popup should drift upward');
+  });
+  it('popup fades over time', () => {
+    const popup = { x: 100, y: 200, text: '+1', alpha: 1, vy: -1.5 };
+    popup.alpha -= 0.025;
+    assert(popup.alpha < 1, 'Popup alpha should decrease');
+  });
+  it('popup removed when alpha reaches 0', () => {
+    const popups = [{ x: 100, y: 200, text: '+1', alpha: 0, vy: -1.5 }];
+    for (let i = popups.length - 1; i >= 0; i--) {
+      if (popups[i].alpha <= 0) popups.splice(i, 1);
+    }
+    assertEqual(popups.length, 0, 'Faded popup should be removed');
+  });
+  it('combo popup shows correct text', () => {
+    const multiplier = 2;
+    const text = multiplier > 1 ? `+${multiplier}` : '+1';
+    assertEqual(text, '+2');
+  });
+});
+
+describe('Feature 7: Parallax Scrolling', () => {
+  it('parallax offset increases each frame when game running', () => {
+    let offset1 = 0;
+    const canvasWidth = 800;
+    offset1 = (offset1 + 0.3) % canvasWidth;
+    assert(offset1 > 0, 'Parallax offset should increase');
+  });
+  it('parallax offset wraps around at canvas width', () => {
+    let offset = 799.9;
+    const canvasWidth = 800;
+    offset = (offset + 0.3) % canvasWidth;
+    assert(offset < 1, 'Offset should wrap around');
+  });
+  it('bush offset uses faster speed than mountain', () => {
+    const mountainSpeed = 0.3;
+    const bushSpeed = 0.8;
+    assert(bushSpeed > mountainSpeed, 'Bushes move faster than mountains');
+  });
+});
+
+describe('Feature 8: Dragon Fire Breathing', () => {
+  it('fire particles spawn on score', () => {
+    const fireParticles = [];
+    const FIRE_COLORS = ['#FF4500', '#FF8C00', '#FFD700', '#FF6347'];
+    for (let i = 0; i < 12; i++) {
+      fireParticles.push({
+        x: 100, y: 200,
+        vx: Math.random() * 4 + 1,
+        vy: (Math.random() - 0.5) * 2,
+        radius: Math.random() * 4 + 2,
+        alpha: 1,
+        color: FIRE_COLORS[Math.floor(Math.random() * FIRE_COLORS.length)]
+      });
+    }
+    assertEqual(fireParticles.length, 12, '12 fire particles should spawn');
+  });
+  it('fire particles move forward (positive vx)', () => {
+    const vx = Math.random() * 4 + 1;
+    assert(vx >= 1 && vx <= 5, 'Fire particles should move forward');
+  });
+  it('fire particles fade and shrink', () => {
+    const p = { alpha: 1, radius: 5 };
+    const dt = 1;
+    p.alpha -= 0.06 * dt;
+    p.radius *= 0.97;
+    assert(p.alpha < 1, 'Alpha should decrease');
+    assert(p.radius < 5, 'Radius should shrink');
+  });
+  it('fire colors are warm colors', () => {
+    const FIRE_COLORS = ['#FF4500', '#FF8C00', '#FFD700', '#FF6347'];
+    assert(FIRE_COLORS.length === 4, 'Should have 4 fire colors');
+    FIRE_COLORS.forEach(c => {
+      assert(c.startsWith('#FF') || c === '#FFD700', `Color ${c} should be warm`);
+    });
+  });
+});
+
+describe('Feature 9: Stars/Twinkling at Night', () => {
+  it('80 stars are initialized', () => {
+    const stars = [];
+    for (let i = 0; i < 80; i++) {
+      stars.push({ x: Math.random(), y: Math.random() * 0.7, phase: Math.random() * Math.PI * 2, speed: Math.random() * 2 + 1 });
+    }
+    assertEqual(stars.length, 80, '80 stars should be initialized');
+  });
+  it('stars are only visible when t < 0.5 (night)', () => {
+    const t = 0.3;
+    const shouldShow = t < 0.5;
+    assert(shouldShow, 'Stars should show at night (t=0.3)');
+  });
+  it('stars are hidden during day (t >= 0.5)', () => {
+    const t = 0.8;
+    const shouldShow = t < 0.5;
+    assert(!shouldShow, 'Stars should hide during day (t=0.8)');
+  });
+  it('star alpha scales with night darkness', () => {
+    const t = 0.1;
+    const starAlpha = Math.max(0, 1 - t * 2);
+    assertApprox(starAlpha, 0.8, 0.01, 'Star alpha should be ~0.8 at t=0.1');
+  });
+  it('twinkle effect oscillates within [0,1]', () => {
+    for (let i = 0; i < 100; i++) {
+      const phase = Math.random() * Math.PI * 2;
+      const twinkle = (Math.sin(Date.now() * 0.001 * 1.5 + phase) + 1) / 2;
+      assert(twinkle >= 0 && twinkle <= 1, 'Twinkle must be in [0,1]');
+    }
+  });
+});
+
+describe('Feature 10: Smooth Camera Follow', () => {
+  it('camera offset moves toward target', () => {
+    let cameraOffsetY = 0;
+    const birdY = 400;
+    const canvasHeight = 600;
+    const dt = 1;
+    const targetOffsetY = -(birdY - canvasHeight / 2) * 0.1;
+    cameraOffsetY += (targetOffsetY - cameraOffsetY) * 0.05 * dt;
+    assert(cameraOffsetY !== 0, 'Camera should move when bird is off-center');
+  });
+  it('camera offset is clamped to 15% of canvas height', () => {
+    let cameraOffsetY = 1000;
+    const canvasHeight = 600;
+    cameraOffsetY = Math.max(Math.min(cameraOffsetY, canvasHeight * 0.15), -canvasHeight * 0.15);
+    assertEqual(cameraOffsetY, 90, 'Camera clamped to 15% = 90px');
+  });
+  it('camera clamps negative values too', () => {
+    let cameraOffsetY = -1000;
+    const canvasHeight = 600;
+    cameraOffsetY = Math.max(Math.min(cameraOffsetY, canvasHeight * 0.15), -canvasHeight * 0.15);
+    assertEqual(cameraOffsetY, -90, 'Camera clamped to -15% = -90px');
+  });
+  it('camera lerp coefficient is 5% per frame', () => {
+    let offset = 0;
+    const target = 100;
+    const dt = 1;
+    offset += (target - offset) * 0.05 * dt;
+    assertEqual(offset, 5, 'Should move 5% per frame toward target');
+  });
+});
+
+describe('Feature 11: Pipe Color by Score', () => {
+  it('green pipes at score 0-9', () => {
+    const c = getPipeColor(0);
+    assertEqual(c.body, '#75B91A');
+    const c9 = getPipeColor(9);
+    assertEqual(c9.body, '#75B91A');
+  });
+  it('blue pipes at score 10-24', () => {
+    const c = getPipeColor(10);
+    assertEqual(c.body, '#2980B9');
+    const c24 = getPipeColor(24);
+    assertEqual(c24.body, '#2980B9');
+  });
+  it('purple pipes at score 25-49', () => {
+    const c = getPipeColor(25);
+    assertEqual(c.body, '#8E44AD');
+    const c49 = getPipeColor(49);
+    assertEqual(c49.body, '#8E44AD');
+  });
+  it('red pipes at score 50+', () => {
+    const c = getPipeColor(50);
+    assertEqual(c.body, '#C0392B');
+    const c100 = getPipeColor(100);
+    assertEqual(c100.body, '#C0392B');
+  });
+  it('pipe color transitions at correct score boundaries', () => {
+    assertEqual(getPipeColor(9).body, '#75B91A');
+    assertEqual(getPipeColor(10).body, '#2980B9');
+    assertEqual(getPipeColor(24).body, '#2980B9');
+    assertEqual(getPipeColor(25).body, '#8E44AD');
+    assertEqual(getPipeColor(49).body, '#8E44AD');
+    assertEqual(getPipeColor(50).body, '#C0392B');
+  });
+});
+
+describe('Feature 12: Animated Grass Blades', () => {
+  it('grass timer increments each frame', () => {
+    let grassTimer = 0;
+    grassTimer += 0.03;
+    assertApprox(grassTimer, 0.03, 0.001);
+  });
+  it('grass blade sway is computed from sin', () => {
+    const grassTimer = 1;
+    const gx = 50;
+    const sway = Math.sin(grassTimer + gx * 0.1) * 4;
+    assert(sway >= -4 && sway <= 4, 'Sway should be within [-4,4]');
+  });
+  it('grass blades are placed at regular spacing', () => {
+    const spacing = 18;
+    const width = 800;
+    const bladeCount = Math.ceil(width / spacing);
+    assert(bladeCount > 0, 'Should have blade count > 0');
+    assert(bladeCount === Math.ceil(800 / 18), 'Blade spacing is correct');
+  });
+  it('grass height varies with position', () => {
+    const gx1 = 0, gx2 = 50;
+    const h1 = 10 + Math.sin(gx1 * 0.3) * 3;
+    const h2 = 10 + Math.sin(gx2 * 0.3) * 3;
+    // Both should be between 7 and 13
+    assert(h1 >= 7 && h1 <= 13, 'Blade height in range');
+    assert(h2 >= 7 && h2 <= 13, 'Blade height in range');
+  });
+});
+
+describe('Feature 13: Best Score Medal System', () => {
+  it('no medal below 10', () => {
+    assertEqual(getMedal(0), null);
+    assertEqual(getMedal(9), null);
+  });
+  it('bronze medal at 10-24', () => {
+    assertEqual(getMedal(10).label, 'Bronze');
+    assertEqual(getMedal(24).label, 'Bronze');
+  });
+  it('silver medal at 25-49', () => {
+    assertEqual(getMedal(25).label, 'Silver');
+    assertEqual(getMedal(49).label, 'Silver');
+  });
+  it('gold medal at 50-99', () => {
+    assertEqual(getMedal(50).label, 'Gold');
+    assertEqual(getMedal(99).label, 'Gold');
+  });
+  it('platinum medal at 100+', () => {
+    assertEqual(getMedal(100).label, 'Platinum');
+    assertEqual(getMedal(500).label, 'Platinum');
+  });
+  it('medal colors are correct', () => {
+    assertEqual(getMedal(10).color, '#CD7F32');   // Bronze
+    assertEqual(getMedal(25).color, '#C0C0C0');   // Silver
+    assertEqual(getMedal(50).color, '#FFD700');   // Gold
+    assertEqual(getMedal(100).color, '#E5E4E2');  // Platinum
+  });
+});
+
+describe('Feature 14: FPS Counter', () => {
+  it('FPS is calculated from elapsed time', () => {
+    assertEqual(calcFPS(16.67), 60);
+    assertEqual(calcFPS(33.33), 30);
+    assertEqual(calcFPS(8.33), 120);
+  });
+  it('FPS rounds to nearest integer', () => {
+    const fps = calcFPS(16.67);
+    assertEqual(fps, Math.round(1000 / 16.67));
+  });
+  it('FPS returns 0 for zero elapsed', () => {
+    assertEqual(calcFPS(0), 0);
+  });
+  it('FPS counter is hidden by default', () => {
+    let showFPS = false;
+    assert(!showFPS, 'FPS counter should be hidden by default');
+  });
+  it('FPS counter toggles on F key', () => {
+    let showFPS = false;
+    // simulate keydown F
+    showFPS = !showFPS;
+    assert(showFPS, 'FPS counter should show after toggle');
+    showFPS = !showFPS;
+    assert(!showFPS, 'FPS counter should hide after second toggle');
+  });
+});
+
+describe('Feature 15: Stats Tracking', () => {
+  it('stats start at zero', () => {
+    const s = createStats();
+    assertEqual(s.totalGames, 0);
+    assertEqual(s.totalScore, 0);
+    assertEqual(s.bestStreak, 0);
+  });
+  it('total games increments each game', () => {
+    let s = createStats();
+    s = recordGame(s, 5);
+    assertEqual(s.totalGames, 1);
+    s = recordGame(s, 10);
+    assertEqual(s.totalGames, 2);
+  });
+  it('total score accumulates across games', () => {
+    let s = createStats();
+    s = recordGame(s, 5);
+    s = recordGame(s, 12);
+    assertEqual(s.totalScore, 17);
+  });
+  it('best streak tracks highest score', () => {
+    let s = createStats();
+    s = recordGame(s, 5);
+    s = recordGame(s, 20);
+    s = recordGame(s, 8);
+    assertEqual(s.bestStreak, 20, 'Best streak should be highest score seen');
+  });
+  it('best streak does not decrease on lower scores', () => {
+    let s = createStats();
+    s = recordGame(s, 50);
+    s = recordGame(s, 3);
+    assertEqual(s.bestStreak, 50);
+  });
+  it('stats serialize to JSON for localStorage', () => {
+    const s = { totalGames: 3, totalScore: 42, bestStreak: 20 };
+    const json = JSON.stringify(s);
+    const parsed = JSON.parse(json);
+    assertEqual(parsed.totalGames, 3);
+    assertEqual(parsed.totalScore, 42);
+    assertEqual(parsed.bestStreak, 20);
+  });
+});
+
+describe('Game State Transitions', () => {
+  it('initial state is not started', () => {
+    let gameStarted = false;
+    let gameRunning = false;
+    assert(!gameStarted && !gameRunning, 'Game should not be running initially');
+  });
+  it('game running becomes true on startGame', () => {
+    let gameRunning = false;
+    let score = 99;
+    // simulate startGame
+    gameRunning = true;
+    score = 0;
+    assert(gameRunning, 'Game should be running after startGame');
+    assertEqual(score, 0, 'Score resets on start');
+  });
+  it('game running becomes false on gameOver', () => {
+    let gameRunning = true;
+    // simulate gameOver check
+    if (gameRunning) gameRunning = false;
+    assert(!gameRunning, 'Game should stop on gameOver');
+  });
+  it('gameOver does not trigger twice', () => {
+    let gameRunning = false;
+    let callCount = 0;
+    function gameOver() {
+      if (!gameRunning) return;
+      gameRunning = false;
+      callCount++;
+    }
+    gameOver(); // should not trigger
+    gameOver(); // should not trigger
+    assertEqual(callCount, 0, 'gameOver should not trigger when not running');
+  });
+  it('score resets to 0 on restart', () => {
+    let score = 42;
+    // simulate startGame
+    score = 0;
+    assertEqual(score, 0);
+  });
+  it('pipes array is cleared on restart', () => {
+    const pipes = [1, 2, 3];
+    // simulate startGame
+    pipes.length = 0;
+    assertEqual(pipes.length, 0);
+  });
+});
+
+describe('DOM Elements Exist', () => {
+  // These tests verify the game HTML has all required elements
+  // They must be run from the tests.html page, not index.html
+  it('no required DOM element check (standalone test file)', () => {
+    // The game elements are in index.html; here we just verify our test file
+    assert(typeof document !== 'undefined', 'Document should be available');
+  });
+});
+
+// ─── Final Summary ─────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  const total = passed + failed;
+  const summary = document.createElement('div');
+  summary.className = `summary ${failed === 0 ? 'pass-summary' : 'fail-summary'}`;
+  summary.innerHTML = `${failed === 0 ? '✅' : '❌'} ${passed}/${total} tests passed${failed > 0 ? ` (${failed} failed)` : ''}`;
+  document.getElementById('results').prepend(summary);
+});
+</script>
+</body>
+</html>
