@@ -18,6 +18,16 @@ A fun, challenging Flappy Bird-style browser game where you fly a dragon through
 - **Share Score** — Share your score with friends via the Web Share API or clipboard
 - **Responsive Design** — Plays on desktop and mobile with touch and keyboard support
 
+### 💰 Monetization Features
+
+- **In-Game Coin Economy** — Earn coins from gameplay (1 coin per score point), persisted in localStorage
+- **Premium Dragon Skins** — Diamond and Shadow skins, unlockable with coins (100 and 200 coins)
+- **Continue System** — Spend 50 coins on game over to revive and keep playing (once per run)
+- **Coin Shop** — Buy coin packs or unlock premium skins from the in-game shop
+- **Ad Banner** — Placeholder ad banner area for ad provider integration; removable for 500 coins
+- **Rewarded Ads** — Watch an ad for +25 bonus coins on game over
+- **Donate Button** — Support the developer with a donation link
+
 ### ✨ New Improvements
 
 1. **Screen Shake on Collision** — The screen shakes when you hit a pipe or the ground for visceral impact feedback
@@ -66,6 +76,11 @@ The test file covers all 15 new features including:
 - FPS calculation
 - Camera follow clamping
 - Game state transitions (start → play → game over → restart)
+- Coin economy (earning, spending, balance)
+- Premium skin unlocking
+- Continue system (cost, single-use per run)
+- Ad removal system
+- Rewarded ad coin bonuses
 
 ## Running Locally
 
