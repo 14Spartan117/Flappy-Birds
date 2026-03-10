@@ -318,6 +318,195 @@
     #name-input-modal button:hover {
       filter: brightness(1.2);
     }
+    /* Coin display */
+    #coin-display {
+      position: absolute;
+      top: calc(20px + var(--safe-top));
+      right: calc(120px + var(--safe-right));
+      z-index: 40;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 12px;
+      border-radius: 5px;
+      color: #FFD700;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    /* Ad banner placeholder */
+    #ad-banner {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 45;
+      color: #aaa;
+      font-size: 13px;
+      font-family: monospace;
+      border-top: 1px solid rgba(255,255,255,0.15);
+    }
+    #ad-banner.hidden { display: none; }
+    /* Remove-ads button */
+    #remove-ads-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    #remove-ads-btn:hover { filter: brightness(1.2); }
+    /* Donate button */
+    #donate-button {
+      position: absolute;
+      top: calc(60px + var(--safe-top));
+      right: calc(20px + var(--safe-right));
+      z-index: 40;
+      background: #e74c3c;
+      padding: 8px 12px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      text-decoration: none;
+      display: inline-block;
+    }
+    #donate-button:hover { filter: brightness(1.15); background: #c0392b; }
+    /* Coin shop modal */
+    #coin-shop-modal {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 70;
+    }
+    #coin-shop-modal.visible { display: flex; }
+    #coin-shop-modal .shop-content {
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      color: white;
+      max-width: 340px;
+      width: 90%;
+      border: 2px solid #FFD700;
+    }
+    #coin-shop-modal .shop-content h2 {
+      color: #FFD700;
+      margin-top: 0;
+    }
+    .shop-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.1);
+      margin: 8px 0;
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+    .shop-item .item-label { font-size: 15px; }
+    .shop-item .item-price {
+      font-size: 13px;
+      color: #95a5a6;
+      font-style: italic;
+    }
+    .shop-item button {
+      background: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .shop-item button:hover { filter: brightness(1.15); }
+    .shop-item button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      filter: none;
+    }
+    #shop-close-btn {
+      margin-top: 12px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 24px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #shop-close-btn:hover { filter: brightness(1.15); }
+    /* Coin shop open button */
+    #shop-button {
+      position: absolute;
+      top: calc(60px + var(--safe-top));
+      right: calc(120px + var(--safe-right));
+      z-index: 40;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 12px;
+      border-radius: 5px;
+      color: #FFD700;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    #shop-button:hover { background: rgba(0,0,0,0.7); }
+    /* Continue button on game-over */
+    #continue-button {
+      margin-top: 8px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #e67e22;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #continue-button:hover { filter: brightness(1.15); background-color: #d35400; }
+    #continue-button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+      filter: none;
+    }
+    /* Coins earned notification on game over */
+    #coins-earned {
+      margin-top: 6px;
+      font-size: 16px;
+      color: #FFD700;
+    }
+    /* Premium skin lock indicator */
+    .skin-btn.locked {
+      position: relative;
+      opacity: 0.65;
+    }
+    .skin-btn .lock-icon {
+      font-size: 10px;
+      margin-left: 2px;
+    }
+    /* Rewarded ad button */
+    #rewarded-ad-btn {
+      margin-top: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      background-color: #8e44ad;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #rewarded-ad-btn:hover { filter: brightness(1.15); }
   </style>
 </head>
 <body>
@@ -358,6 +547,8 @@
           <button id="pink-skin-btn" class="skin-btn" aria-label="Pink dragon skin">Pink</button>
           <button id="gold-skin-btn" class="skin-btn" aria-label="Gold dragon skin">Gold</button>
           <button id="silver-skin-btn" class="skin-btn" aria-label="Silver dragon skin">Silver</button>
+          <button id="diamond-skin-btn" class="skin-btn locked" aria-label="Diamond dragon skin (Premium)" data-cost="100">Diamond 🔒</button>
+          <button id="shadow-skin-btn" class="skin-btn locked" aria-label="Shadow dragon skin (Premium)" data-cost="200">Shadow 🔒</button>
         </div>
       </div>
     </div>
@@ -369,7 +560,10 @@
       <div id="high-score">High Score: 0</div>
       <div id="stats-display"></div>
       <button id="restart-button" aria-label="Restart game">Restart</button>
+      <button id="continue-button" aria-label="Continue game for coins">Continue (50 🪙)</button>
       <button id="share-button" aria-label="Share score">Share Score</button>
+      <div id="coins-earned"></div>
+      <button id="rewarded-ad-btn" aria-label="Watch ad for bonus coins">📺 Watch Ad (+25 🪙)</button>
     </div>
     <div id="name-input-modal">
       <div class="modal-content">
@@ -381,8 +575,59 @@
         <button id="name-skip-btn" aria-label="Skip name entry">Skip</button>
       </div>
     </div>
+    <div id="coin-display" aria-live="polite">🪙 0</div>
+    <div id="shop-button" role="button" aria-label="Open coin shop" tabindex="0">🛒 Shop</div>
+    <a id="donate-button" href="https://buymeacoffee.com" target="_blank" rel="noopener noreferrer" aria-label="Support the developer">❤️ Donate</a>
     <div id="mute-button" role="button" aria-label="Toggle mute" tabindex="0">🔊</div>
     <div id="pause-button" role="button" aria-label="Pause game" tabindex="0">Pause</div>
+    <!-- Ad Banner Placeholder -->
+    <div id="ad-banner">
+      <span>[ Ad Space — Integrate your ad provider here ]</span>
+      <button id="remove-ads-btn" aria-label="Remove ads for coins">Remove Ads (500 🪙)</button>
+    </div>
+    <!-- Coin Shop Modal -->
+    <div id="coin-shop-modal">
+      <div class="shop-content">
+        <h2>🛒 Coin Shop</h2>
+        <p id="shop-coin-balance">Your Coins: 🪙 0</p>
+        <div class="shop-item">
+          <div>
+            <div class="item-label">💰 100 Coins</div>
+            <div class="item-price">$0.99 (simulated)</div>
+          </div>
+          <button id="buy-100-btn" aria-label="Buy 100 coins">Buy</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <div class="item-label">💰 500 Coins</div>
+            <div class="item-price">$3.99 (simulated)</div>
+          </div>
+          <button id="buy-500-btn" aria-label="Buy 500 coins">Buy</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <div class="item-label">💰 1200 Coins</div>
+            <div class="item-price">$7.99 (simulated)</div>
+          </div>
+          <button id="buy-1200-btn" aria-label="Buy 1200 coins">Buy</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <div class="item-label">🐉 Diamond Skin</div>
+            <div class="item-price">100 🪙</div>
+          </div>
+          <button id="buy-diamond-btn" aria-label="Unlock Diamond skin">Unlock</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <div class="item-label">🐉 Shadow Skin</div>
+            <div class="item-price">200 🪙</div>
+          </div>
+          <button id="buy-shadow-btn" aria-label="Unlock Shadow skin">Unlock</button>
+        </div>
+        <button id="shop-close-btn" aria-label="Close shop">Close</button>
+      </div>
+    </div>
     <canvas id="game-canvas"></canvas>
   </div>
   
@@ -474,6 +719,15 @@
       const nameSubmitBtn = document.getElementById('name-submit-btn');
       const nameSkipBtn = document.getElementById('name-skip-btn');
       const startHighScore = document.getElementById('start-high-score');
+      const coinDisplay = document.getElementById('coin-display');
+      const coinShopModal = document.getElementById('coin-shop-modal');
+      const shopButton = document.getElementById('shop-button');
+      const shopCoinBalance = document.getElementById('shop-coin-balance');
+      const continueButton = document.getElementById('continue-button');
+      const coinsEarnedDisplay = document.getElementById('coins-earned');
+      const rewardedAdBtn = document.getElementById('rewarded-ad-btn');
+      const adBanner = document.getElementById('ad-banner');
+      const removeAdsBtn = document.getElementById('remove-ads-btn');
   
       // Mode selection buttons
       const classicBtn = document.getElementById('classic-btn');
@@ -491,6 +745,8 @@
       const pinkSkinBtn = document.getElementById('pink-skin-btn');
       const goldSkinBtn = document.getElementById('gold-skin-btn');
       const silverSkinBtn = document.getElementById('silver-skin-btn');
+      const diamondSkinBtn = document.getElementById('diamond-skin-btn');
+      const shadowSkinBtn = document.getElementById('shadow-skin-btn');
   
       // Set canvas size
       function resizeCanvas() {
@@ -516,6 +772,14 @@
       const MAX_DT_MULTIPLIER = 3;
       const LEADERBOARD_MAX_ENTRIES = 10;
       const DEFAULT_PLAYER_NAME = 'Anonymous';
+      const CONTINUE_COST = 50;
+      const COINS_PER_SCORE = 1;
+      const REWARDED_AD_COINS = 25;
+      const REMOVE_ADS_COST = 500;
+      const PREMIUM_SKINS = {
+        diamond: { cost: 100 },
+        shadow: { cost: 200 }
+      };
 
       // Game variables
       const gravity = 0.5;
@@ -544,6 +808,95 @@
         highScore = 0;
       }
       highScoreDisplay.innerText = `High Score: ${highScore}`;
+
+      // --- Monetization: Coin system ---
+      let coins = 0;
+      try {
+        coins = parseInt(localStorage.getItem('dragonCoins')) || 0;
+      } catch (e) {
+        coins = 0;
+      }
+      let unlockedSkins = new Set(['red', 'blue', 'green', 'pink', 'gold', 'silver']);
+      try {
+        const savedUnlocks = localStorage.getItem('unlockedSkins');
+        if (savedUnlocks) unlockedSkins = new Set(JSON.parse(savedUnlocks));
+      } catch (e) { /* storage unavailable */ }
+      let adsRemoved = false;
+      try {
+        adsRemoved = localStorage.getItem('adsRemoved') === 'true';
+      } catch (e) { /* storage unavailable */ }
+      let continueUsed = false;
+
+      function saveCoins() {
+        try { localStorage.setItem('dragonCoins', coins.toString()); } catch (e) {}
+      }
+
+      function saveUnlockedSkins() {
+        try { localStorage.setItem('unlockedSkins', JSON.stringify([...unlockedSkins])); } catch (e) {}
+      }
+
+      function updateCoinDisplay() {
+        coinDisplay.innerText = `🪙 ${coins}`;
+        if (shopCoinBalance) shopCoinBalance.innerText = `Your Coins: 🪙 ${coins}`;
+      }
+
+      function addCoins(amount) {
+        coins += amount;
+        saveCoins();
+        updateCoinDisplay();
+      }
+
+      function spendCoins(amount) {
+        if (coins < amount) return false;
+        coins -= amount;
+        saveCoins();
+        updateCoinDisplay();
+        return true;
+      }
+
+      function calculateCoinsEarned(gameScore) {
+        return gameScore * COINS_PER_SCORE;
+      }
+
+      function isSkinUnlocked(skinName) {
+        return unlockedSkins.has(skinName);
+      }
+
+      function unlockSkin(skinName) {
+        const premium = PREMIUM_SKINS[skinName];
+        if (!premium) return false;
+        if (unlockedSkins.has(skinName)) return false;
+        if (!spendCoins(premium.cost)) return false;
+        unlockedSkins.add(skinName);
+        saveUnlockedSkins();
+        return true;
+      }
+
+      function updateSkinButtons() {
+        [diamondSkinBtn, shadowSkinBtn].forEach(btn => {
+          const skinName = btn.id.replace('-skin-btn', '');
+          if (unlockedSkins.has(skinName)) {
+            btn.classList.remove('locked');
+            btn.textContent = skinName.charAt(0).toUpperCase() + skinName.slice(1);
+          } else {
+            btn.classList.add('locked');
+            const cost = PREMIUM_SKINS[skinName] ? PREMIUM_SKINS[skinName].cost : 0;
+            btn.textContent = `${skinName.charAt(0).toUpperCase() + skinName.slice(1)} 🔒 (${cost}🪙)`;
+          }
+        });
+      }
+
+      function updateAdBanner() {
+        if (adsRemoved) {
+          adBanner.classList.add('hidden');
+        } else {
+          adBanner.classList.remove('hidden');
+        }
+      }
+
+      updateCoinDisplay();
+      updateSkinButtons();
+      updateAdBanner();
   
       let score = 0;
       let gameStarted = false;
@@ -722,7 +1075,9 @@
         green:  { body: '#00CC00', wing: '#00AA00', head: '#00CC00', snout: '#009900', eye: '#FFFF00' },
         pink:   { body: '#FF69B4', wing: '#FF1493', head: '#FF69B4', snout: '#FF1493', eye: '#FFFFFF' },
         gold:   { body: '#FFD700', wing: '#FFA500', head: '#FFD700', snout: '#FFA500', eye: '#8B0000' },
-        silver: { body: '#C0C0C0', wing: '#A0A0A0', head: '#C0C0C0', snout: '#909090', eye: '#000080' }
+        silver: { body: '#C0C0C0', wing: '#A0A0A0', head: '#C0C0C0', snout: '#909090', eye: '#000080' },
+        diamond:{ body: '#B9F2FF', wing: '#00CED1', head: '#B9F2FF', snout: '#00CED1', eye: '#FF00FF' },
+        shadow: { body: '#2C2C2C', wing: '#1A1A1A', head: '#2C2C2C', snout: '#1A1A1A', eye: '#FF0000' }
       };
   
       const bird = {
@@ -1455,6 +1810,7 @@
         updateGameParameters();
         lastPipeTime = Date.now();
         lastFrameTime = performance.now();
+        continueUsed = false;
       }
   
       // --- Feature 13: Medal system ---
@@ -1523,6 +1879,25 @@
         // Reset combo display
         comboDisplay.innerText = '';
 
+        // --- Monetization: Award coins for the run ---
+        const coinsEarned = calculateCoinsEarned(score);
+        if (coinsEarned > 0) {
+          addCoins(coinsEarned);
+          coinsEarnedDisplay.innerText = `+${coinsEarned} 🪙 earned!`;
+        } else {
+          coinsEarnedDisplay.innerText = '';
+        }
+
+        // --- Monetization: Continue button ---
+        continueButton.disabled = coins < CONTINUE_COST || continueUsed;
+        continueButton.innerText = continueUsed
+          ? 'Continue (used)'
+          : `Continue (${CONTINUE_COST} 🪙)`;
+
+        // Reset rewarded ad button for this game over
+        rewardedAdBtn.disabled = false;
+        rewardedAdBtn.innerText = `📺 Watch Ad (+${REWARDED_AD_COINS} 🪙)`;
+
         playGameOverSound();
         addScoreToLeaderboard();
         document.getElementById('bottom-controls').style.display = 'flex';
@@ -1553,6 +1928,101 @@
       });
   
       restartButton.addEventListener('click', startCountdown);
+
+      // --- Monetization: Continue game ---
+      continueButton.addEventListener('click', () => {
+        if (continueUsed || coins < CONTINUE_COST) return;
+        if (!spendCoins(CONTINUE_COST)) return;
+        continueUsed = true;
+        gameOverMessage.style.display = 'none';
+        nameInputModal.classList.remove('visible');
+        document.getElementById('bottom-controls').style.display = 'none';
+        document.getElementById('difficulty-selection').style.display = 'none';
+        document.getElementById('mode-selection').style.display = 'none';
+        document.getElementById('skin-selection').style.display = 'none';
+        gameRunning = true;
+        bird.y = canvas.height / 2;
+        bird.velocity = 0;
+        pipes.length = 0;
+        lastPipeTime = Date.now();
+        lastFrameTime = performance.now();
+      });
+
+      // --- Monetization: Rewarded ad (simulated) ---
+      rewardedAdBtn.addEventListener('click', () => {
+        addCoins(REWARDED_AD_COINS);
+        rewardedAdBtn.disabled = true;
+        rewardedAdBtn.innerText = '✅ Coins claimed!';
+        // Update continue button since we got more coins
+        continueButton.disabled = coins < CONTINUE_COST || continueUsed;
+      });
+
+      // --- Monetization: Coin shop ---
+      shopButton.addEventListener('click', () => {
+        updateCoinDisplay();
+        updateShopButtons();
+        coinShopModal.classList.add('visible');
+      });
+
+      document.getElementById('shop-close-btn').addEventListener('click', () => {
+        coinShopModal.classList.remove('visible');
+      });
+
+      function updateShopButtons() {
+        const buyDiamondBtn = document.getElementById('buy-diamond-btn');
+        const buyShadowBtn = document.getElementById('buy-shadow-btn');
+        if (unlockedSkins.has('diamond')) {
+          buyDiamondBtn.textContent = 'Owned';
+          buyDiamondBtn.disabled = true;
+        } else {
+          buyDiamondBtn.textContent = 'Unlock';
+          buyDiamondBtn.disabled = coins < PREMIUM_SKINS.diamond.cost;
+        }
+        if (unlockedSkins.has('shadow')) {
+          buyShadowBtn.textContent = 'Owned';
+          buyShadowBtn.disabled = true;
+        } else {
+          buyShadowBtn.textContent = 'Unlock';
+          buyShadowBtn.disabled = coins < PREMIUM_SKINS.shadow.cost;
+        }
+      }
+
+      // Simulated coin purchases (in a real app, these would go through a payment provider)
+      document.getElementById('buy-100-btn').addEventListener('click', () => {
+        addCoins(100);
+        updateShopButtons();
+      });
+      document.getElementById('buy-500-btn').addEventListener('click', () => {
+        addCoins(500);
+        updateShopButtons();
+      });
+      document.getElementById('buy-1200-btn').addEventListener('click', () => {
+        addCoins(1200);
+        updateShopButtons();
+      });
+
+      // Premium skin purchases from shop
+      document.getElementById('buy-diamond-btn').addEventListener('click', () => {
+        if (unlockSkin('diamond')) {
+          updateSkinButtons();
+          updateShopButtons();
+        }
+      });
+      document.getElementById('buy-shadow-btn').addEventListener('click', () => {
+        if (unlockSkin('shadow')) {
+          updateSkinButtons();
+          updateShopButtons();
+        }
+      });
+
+      // Remove ads
+      removeAdsBtn.addEventListener('click', () => {
+        if (spendCoins(REMOVE_ADS_COST)) {
+          adsRemoved = true;
+          try { localStorage.setItem('adsRemoved', 'true'); } catch (e) {}
+          updateAdBanner();
+        }
+      });
   
       pauseButton.addEventListener('click', () => {
         paused = !paused;
@@ -1610,8 +2080,18 @@
       );
 
       setupButtonGroup(
-        [{el: redSkinBtn, value: 'red'}, {el: blueSkinBtn, value: 'blue'}, {el: greenSkinBtn, value: 'green'}, {el: pinkSkinBtn, value: 'pink'}, {el: goldSkinBtn, value: 'gold'}, {el: silverSkinBtn, value: 'silver'}],
-        (value) => { selectedSkin = value; }
+        [{el: redSkinBtn, value: 'red'}, {el: blueSkinBtn, value: 'blue'}, {el: greenSkinBtn, value: 'green'}, {el: pinkSkinBtn, value: 'pink'}, {el: goldSkinBtn, value: 'gold'}, {el: silverSkinBtn, value: 'silver'}, {el: diamondSkinBtn, value: 'diamond'}, {el: shadowSkinBtn, value: 'shadow'}],
+        (value) => {
+          if (!isSkinUnlocked(value)) {
+            // Revert selection to current skin
+            document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('selected'));
+            document.getElementById(`${selectedSkin}-skin-btn`).classList.add('selected');
+            coinShopModal.classList.add('visible');
+            updateShopButtons();
+            return;
+          }
+          selectedSkin = value;
+        }
       );
   
       document.getElementById('share-button').addEventListener('click', async () => {

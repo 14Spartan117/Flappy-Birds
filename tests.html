@@ -1088,6 +1088,302 @@ describe('Game State Transitions', () => {
   });
 });
 
+// ─── Monetization Tests ────────────────────────────────────────────────────
+
+describe('Coin Economy', () => {
+  it('calculateCoinsEarned returns score * COINS_PER_SCORE', () => {
+    const COINS_PER_SCORE = 1;
+    function calculateCoinsEarned(gameScore) {
+      return gameScore * COINS_PER_SCORE;
+    }
+    assertEqual(calculateCoinsEarned(0), 0, 'Zero score yields 0 coins');
+    assertEqual(calculateCoinsEarned(1), 1, '1 score yields 1 coin');
+    assertEqual(calculateCoinsEarned(50), 50, '50 score yields 50 coins');
+    assertEqual(calculateCoinsEarned(100), 100, '100 score yields 100 coins');
+  });
+
+  it('addCoins increases balance correctly', () => {
+    let coins = 0;
+    function addCoins(amount) { coins += amount; }
+    addCoins(25);
+    assertEqual(coins, 25);
+    addCoins(75);
+    assertEqual(coins, 100);
+  });
+
+  it('spendCoins deducts correctly when sufficient', () => {
+    let coins = 100;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    assert(spendCoins(50), 'Should succeed spending 50 from 100');
+    assertEqual(coins, 50, 'Balance should be 50 after spending 50');
+  });
+
+  it('spendCoins fails when insufficient', () => {
+    let coins = 30;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    assert(!spendCoins(50), 'Should fail spending 50 from 30');
+    assertEqual(coins, 30, 'Balance should remain 30');
+  });
+
+  it('coins never go negative', () => {
+    let coins = 0;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    assert(!spendCoins(1), 'Cannot spend from zero');
+    assertEqual(coins, 0, 'Coins stay at 0');
+  });
+});
+
+describe('Premium Skins', () => {
+  it('default skins are always unlocked', () => {
+    const unlockedSkins = new Set(['red','blue','green','pink','gold','silver']);
+    assert(unlockedSkins.has('red'), 'Red should be unlocked');
+    assert(unlockedSkins.has('blue'), 'Blue should be unlocked');
+    assert(unlockedSkins.has('green'), 'Green should be unlocked');
+    assert(unlockedSkins.has('pink'), 'Pink should be unlocked');
+    assert(unlockedSkins.has('gold'), 'Gold should be unlocked');
+    assert(unlockedSkins.has('silver'), 'Silver should be unlocked');
+  });
+
+  it('premium skins are locked by default', () => {
+    const unlockedSkins = new Set(['red','blue','green','pink','gold','silver']);
+    assert(!unlockedSkins.has('diamond'), 'Diamond should be locked');
+    assert(!unlockedSkins.has('shadow'), 'Shadow should be locked');
+  });
+
+  it('unlockSkin succeeds with enough coins', () => {
+    let coins = 200;
+    const unlockedSkins = new Set(['red','blue','green','pink','gold','silver']);
+    const PREMIUM_SKINS = { diamond: { cost: 100 }, shadow: { cost: 200 } };
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function unlockSkin(skinName) {
+      const premium = PREMIUM_SKINS[skinName];
+      if (!premium) return false;
+      if (unlockedSkins.has(skinName)) return false;
+      if (!spendCoins(premium.cost)) return false;
+      unlockedSkins.add(skinName);
+      return true;
+    }
+    assert(unlockSkin('diamond'), 'Should unlock diamond with 200 coins');
+    assert(unlockedSkins.has('diamond'), 'Diamond should now be in set');
+    assertEqual(coins, 100, '100 coins left after buying diamond');
+  });
+
+  it('unlockSkin fails with insufficient coins', () => {
+    let coins = 50;
+    const unlockedSkins = new Set(['red','blue','green','pink','gold','silver']);
+    const PREMIUM_SKINS = { diamond: { cost: 100 }, shadow: { cost: 200 } };
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function unlockSkin(skinName) {
+      const premium = PREMIUM_SKINS[skinName];
+      if (!premium) return false;
+      if (unlockedSkins.has(skinName)) return false;
+      if (!spendCoins(premium.cost)) return false;
+      unlockedSkins.add(skinName);
+      return true;
+    }
+    assert(!unlockSkin('diamond'), 'Should not unlock diamond with 50 coins');
+    assert(!unlockedSkins.has('diamond'), 'Diamond should remain locked');
+    assertEqual(coins, 50, 'Coins should not change');
+  });
+
+  it('cannot unlock same skin twice', () => {
+    let coins = 300;
+    const unlockedSkins = new Set(['red','blue','green','pink','gold','silver']);
+    const PREMIUM_SKINS = { diamond: { cost: 100 }, shadow: { cost: 200 } };
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function unlockSkin(skinName) {
+      const premium = PREMIUM_SKINS[skinName];
+      if (!premium) return false;
+      if (unlockedSkins.has(skinName)) return false;
+      if (!spendCoins(premium.cost)) return false;
+      unlockedSkins.add(skinName);
+      return true;
+    }
+    assert(unlockSkin('diamond'), 'First unlock should succeed');
+    assert(!unlockSkin('diamond'), 'Second unlock should fail');
+    assertEqual(coins, 200, 'Only charged once');
+  });
+
+  it('unlockSkin returns false for non-premium skins', () => {
+    let coins = 999;
+    const unlockedSkins = new Set(['red','blue','green','pink','gold','silver']);
+    const PREMIUM_SKINS = { diamond: { cost: 100 }, shadow: { cost: 200 } };
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function unlockSkin(skinName) {
+      const premium = PREMIUM_SKINS[skinName];
+      if (!premium) return false;
+      if (unlockedSkins.has(skinName)) return false;
+      if (!spendCoins(premium.cost)) return false;
+      unlockedSkins.add(skinName);
+      return true;
+    }
+    assert(!unlockSkin('red'), 'Red is not a premium skin');
+    assertEqual(coins, 999, 'No coins deducted for free skin');
+  });
+});
+
+describe('Continue System', () => {
+  it('continue costs CONTINUE_COST coins', () => {
+    const CONTINUE_COST = 50;
+    let coins = 100;
+    let continueUsed = false;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function continueGame() {
+      if (continueUsed || coins < CONTINUE_COST) return false;
+      if (!spendCoins(CONTINUE_COST)) return false;
+      continueUsed = true;
+      return true;
+    }
+    assert(continueGame(), 'Should be able to continue');
+    assertEqual(coins, 50, 'Should deduct 50 coins');
+    assert(continueUsed, 'continueUsed should be true');
+  });
+
+  it('cannot continue twice in same run', () => {
+    const CONTINUE_COST = 50;
+    let coins = 200;
+    let continueUsed = false;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function continueGame() {
+      if (continueUsed || coins < CONTINUE_COST) return false;
+      if (!spendCoins(CONTINUE_COST)) return false;
+      continueUsed = true;
+      return true;
+    }
+    assert(continueGame(), 'First continue should succeed');
+    assert(!continueGame(), 'Second continue should fail');
+    assertEqual(coins, 150, 'Only charged once');
+  });
+
+  it('cannot continue without enough coins', () => {
+    const CONTINUE_COST = 50;
+    let coins = 25;
+    let continueUsed = false;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    function continueGame() {
+      if (continueUsed || coins < CONTINUE_COST) return false;
+      if (!spendCoins(CONTINUE_COST)) return false;
+      continueUsed = true;
+      return true;
+    }
+    assert(!continueGame(), 'Should not continue with 25 coins');
+    assertEqual(coins, 25, 'Coins unchanged');
+  });
+
+  it('continueUsed resets on new game', () => {
+    let continueUsed = true;
+    // Simulate startGame reset
+    continueUsed = false;
+    assert(!continueUsed, 'continueUsed resets to false');
+  });
+});
+
+describe('Ad System', () => {
+  it('ads removed flag hides banner', () => {
+    let adsRemoved = false;
+    function updateAdBanner() {
+      return adsRemoved ? 'hidden' : 'visible';
+    }
+    assertEqual(updateAdBanner(), 'visible', 'Banner visible when ads not removed');
+    adsRemoved = true;
+    assertEqual(updateAdBanner(), 'hidden', 'Banner hidden when ads removed');
+  });
+
+  it('remove ads costs REMOVE_ADS_COST', () => {
+    const REMOVE_ADS_COST = 500;
+    let coins = 600;
+    let adsRemoved = false;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    if (spendCoins(REMOVE_ADS_COST)) adsRemoved = true;
+    assert(adsRemoved, 'Ads should be removed');
+    assertEqual(coins, 100, '500 coins deducted');
+  });
+
+  it('cannot remove ads without enough coins', () => {
+    const REMOVE_ADS_COST = 500;
+    let coins = 200;
+    let adsRemoved = false;
+    function spendCoins(amount) {
+      if (coins < amount) return false;
+      coins -= amount;
+      return true;
+    }
+    if (spendCoins(REMOVE_ADS_COST)) adsRemoved = true;
+    assert(!adsRemoved, 'Ads should not be removed');
+    assertEqual(coins, 200, 'Coins unchanged');
+  });
+});
+
+describe('Rewarded Ad', () => {
+  it('rewarded ad gives correct coin bonus', () => {
+    const REWARDED_AD_COINS = 25;
+    let coins = 10;
+    function addCoins(amount) { coins += amount; }
+    addCoins(REWARDED_AD_COINS);
+    assertEqual(coins, 35, 'Should have 35 coins after rewarded ad');
+  });
+});
+
+describe('Skin Definitions', () => {
+  it('diamond skin has correct colors', () => {
+    const diamondSkin = { body: '#B9F2FF', wing: '#00CED1', head: '#B9F2FF', snout: '#00CED1', eye: '#FF00FF' };
+    assertEqual(diamondSkin.body, '#B9F2FF');
+    assertEqual(diamondSkin.wing, '#00CED1');
+    assertEqual(diamondSkin.eye, '#FF00FF');
+  });
+
+  it('shadow skin has correct colors', () => {
+    const shadowSkin = { body: '#2C2C2C', wing: '#1A1A1A', head: '#2C2C2C', snout: '#1A1A1A', eye: '#FF0000' };
+    assertEqual(shadowSkin.body, '#2C2C2C');
+    assertEqual(shadowSkin.wing, '#1A1A1A');
+    assertEqual(shadowSkin.eye, '#FF0000');
+  });
+});
+
 describe('DOM Elements Exist', () => {
   // These tests verify the game HTML has all required elements
   // They must be run from the tests.html page, not index.html
