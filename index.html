@@ -15,577 +15,981 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>" />
   <title>Dragon Flight - Kodex</title>
   <style>
+    /* ── Design Tokens ─────────────────────────────────────── */
     :root {
-      /* Default safe-area insets */
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-left: env(safe-area-inset-left, 0px);
-      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-top:    env(safe-area-inset-top,    0px);
+      --safe-left:   env(safe-area-inset-left,   0px);
+      --safe-right:  env(safe-area-inset-right,  0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+      /* Surfaces */
+      --clr-surface:    rgba(8,  18, 42, 0.88);
+      --clr-surface-hi: rgba(12, 26, 58, 0.94);
+      --clr-card:       rgba(10, 22, 52, 0.97);
+      --clr-border:     rgba(255,255,255,0.11);
+
+      /* Semantic */
+      --clr-gold:     #FFD700;
+      --clr-green:    #27ae60;
+      --clr-green-hi: #2ecc71;
+      --clr-red:      #e74c3c;
+      --clr-orange:   #e67e22;
+      --clr-purple:   #8e44ad;
+      --clr-accent:   #00d4ff;
+
+      /* Text */
+      --clr-text:      #ffffff;
+      --clr-text-dim:  rgba(255,255,255,0.62);
+      --clr-text-mute: rgba(255,255,255,0.36);
+
+      /* Radii */
+      --r-sm:   8px;
+      --r-md:   12px;
+      --r-lg:   18px;
+      --r-xl:   24px;
+      --r-pill: 9999px;
+
+      /* Shadows */
+      --sh-sm: 0 2px 8px  rgba(0,0,0,0.40);
+      --sh-md: 0 4px 20px rgba(0,0,0,0.50);
+      --sh-lg: 0 8px 40px rgba(0,0,0,0.60);
+
+      /* Transitions */
+      --dur-fast: 0.14s ease;
+      --dur-std:  0.22s ease;
+      --dur-slow: 0.38s ease;
     }
-    /* Combo display */
-    #combo-display {
-      position: absolute;
-      top: calc(70px + var(--safe-top));
-      width: 100%;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      color: #FFD700;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-      z-index: 10;
-      pointer-events: none;
-    }
-    /* FPS counter */
-    #fps-counter {
-      position: absolute;
-      bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-      right: calc(10px + var(--safe-right));
-      z-index: 40;
-      background: rgba(0,0,0,0.5);
-      color: #0f0;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: monospace;
-      display: none;
-    }
-    /* Stats display on game over */
-    #stats-display {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #ccc;
-    }
+
+    /* ── Reset / Base ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      box-sizing: border-box;
+      height: 100%; width: 100%;
+      overflow: hidden;
     }
     body {
-      padding-top: var(--safe-top);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-      background-color: #71C5CF;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #71C5CF;
       touch-action: manipulation;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
-    /* Game container covers full viewport */
+
+    /* ── Game Container ────────────────────────────────────── */
     #game-container {
       position: relative;
       width: 100%;
       height: 100vh;
+      height: 100dvh;
       overflow: hidden;
     }
-    /* Canvas fills container */
+
+    /* ── Canvas ────────────────────────────────────────────── */
     canvas {
+      position: absolute;
+      inset: 0;
       display: block;
       width: 100%;
       height: 100%;
       touch-action: none;
       z-index: 0;
     }
-    /* Top UI elements use our safe-area variables */
+
+    /* ── Shared Interactive Feedback ───────────────────────── */
+    button, [role="button"] {
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      line-height: 1;
+      border: none;
+      outline: none;
+      transition: filter var(--dur-fast), transform var(--dur-fast), background var(--dur-fast);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    button:focus-visible, [role="button"]:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 2px;
+    }
+    button:active:not(:disabled), [role="button"]:active {
+      filter: brightness(1.18);
+      transform: scale(0.96);
+    }
+
+    /* ── Animations ────────────────────────────────────────── */
+    @keyframes floatBob {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-8px); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.55; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes slideUpIn {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    }
+    @keyframes panelSlideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+
+    /* ── HUD: Score ────────────────────────────────────────── */
     #score-display {
       position: absolute;
-      top: calc(20px + var(--safe-top));
-      width: 100%;
+      top: calc(16px + var(--safe-top));
+      left: 0; right: 0;
       text-align: center;
-      font-size: 40px;
-      font-weight: bold;
-      color: white;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      font-size: clamp(34px, 10vw, 54px);
+      font-weight: 800;
+      color: var(--clr-text);
+      text-shadow: 0 2px 8px rgba(0,0,0,0.65), 0 0 24px rgba(255,255,255,0.18);
       z-index: 10;
+      pointer-events: none;
+      letter-spacing: -1px;
     }
+
+    /* ── HUD: Combo ────────────────────────────────────────── */
+    #combo-display {
+      position: absolute;
+      top: calc(68px + var(--safe-top));
+      left: 0; right: 0;
+      text-align: center;
+      font-size: clamp(15px, 5vw, 22px);
+      font-weight: 700;
+      color: var(--clr-gold);
+      text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* ── HUD: FPS ──────────────────────────────────────────── */
+    #fps-counter {
+      position: absolute;
+      bottom: calc(12px + var(--safe-bottom));
+      right: calc(12px + var(--safe-right));
+      z-index: 40;
+      background: rgba(0,0,0,0.55);
+      color: #0f0;
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      display: none;
+    }
+
+    /* ── HUD: Pause & Mute Buttons ─────────────────────────── */
+    #pause-button, #mute-button {
+      position: absolute;
+      top: calc(14px + var(--safe-top));
+      z-index: 40;
+      background: var(--clr-surface);
+      color: var(--clr-text);
+      border-radius: var(--r-pill);
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--sh-sm);
+      border: 1px solid var(--clr-border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    #pause-button {
+      right: calc(14px + var(--safe-right));
+      min-width: 76px;
+      padding: 0 16px;
+      font-size: 14px;
+    }
+    #mute-button {
+      right: calc(100px + var(--safe-right));
+      min-width: 46px;
+      width: 46px;
+      font-size: 20px;
+    }
+    #pause-button:hover, #mute-button:hover { background: var(--clr-surface-hi); }
+
+    /* ── HUD: Coin Display ─────────────────────────────────── */
+    #coin-display {
+      position: absolute;
+      top: calc(14px + var(--safe-top));
+      left: calc(14px + var(--safe-left));
+      z-index: 40;
+      background: var(--clr-surface);
+      color: var(--clr-gold);
+      padding: 0 12px;
+      min-height: 42px;
+      border-radius: var(--r-pill);
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: var(--sh-sm);
+      border: 1px solid rgba(255,215,0,0.28);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* ── HUD: Shop & Donate ────────────────────────────────── */
+    #shop-button {
+      position: absolute;
+      top: calc(64px + var(--safe-top));
+      left: calc(14px + var(--safe-left));
+      z-index: 40;
+      background: var(--clr-surface);
+      color: var(--clr-gold);
+      padding: 0 12px;
+      min-height: 36px;
+      border-radius: var(--r-pill);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: var(--sh-sm);
+      border: 1px solid var(--clr-border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    #shop-button:hover { background: var(--clr-surface-hi); }
+
+    #donate-button {
+      position: absolute;
+      top: calc(64px + var(--safe-top));
+      right: calc(14px + var(--safe-right));
+      z-index: 40;
+      background: var(--clr-red);
+      color: var(--clr-text);
+      padding: 0 12px;
+      min-height: 36px;
+      border-radius: var(--r-pill);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+      box-shadow: var(--sh-sm);
+    }
+    #donate-button:hover { filter: brightness(1.15); }
+
+    /* ── Leaderboard ───────────────────────────────────────── */
     #leaderboard {
       position: absolute;
-      top: calc(20px + var(--safe-top));
-      left: calc(20px + var(--safe-left));
+      top: calc(110px + var(--safe-top));
+      left: calc(12px + var(--safe-left));
       z-index: 40;
-      background: rgba(0,0,0,0.5);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 16px;
-      max-width: 200px;
+      background: var(--clr-surface);
+      color: var(--clr-text);
+      padding: 10px 12px;
+      border-radius: var(--r-md);
+      font-size: 12px;
+      max-width: 150px;
+      box-shadow: var(--sh-sm);
+      border: 1px solid var(--clr-border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
-    #start-high-score {
-      font-size: 20px;
-      margin: 5px 0 0 0;
+    #leaderboard strong {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--clr-gold);
+      margin-bottom: 6px;
     }
-    /* Reduced start message size and padding */
-    #start-message {
-      position: absolute;
-      top: 30%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      font-size: 28px;
-      font-weight: bold;
-      color: white;
-      background-color: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 10px;
-      z-index: 20;
+    #leaderboard-list div {
+      font-size: 11px;
+      padding: 2px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--clr-text-dim);
     }
+
+    /* ── Achievement Toast ─────────────────────────────────── */
     #achievement-notification {
       position: absolute;
-      top: 40%;
+      top: 38%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 36px;
-      color: yellow;
-      text-shadow: 2px 2px 4px #000;
+      font-size: clamp(15px, 5vw, 22px);
+      font-weight: 700;
+      color: var(--clr-gold);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
       opacity: 0;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.4s ease;
       pointer-events: none;
       z-index: 50;
+      white-space: nowrap;
+      background: var(--clr-surface-hi);
+      padding: 8px 18px;
+      border-radius: var(--r-pill);
+      border: 1px solid rgba(255,215,0,0.45);
+      box-shadow: var(--sh-sm);
     }
-    #achievement-notification.visible {
-      opacity: 1;
-    }
-    /* Game over sign remains at 40% */
-    #game-over {
+    #achievement-notification.visible { opacity: 1; }
+
+    /* ── Start Screen ──────────────────────────────────────── */
+    #start-message {
       position: absolute;
-      top: 40%;
+      top: 32%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 30px;
-      font-weight: bold;
-      color: white;
-      background-color: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 10px;
-      display: none;
-      z-index: 30;
+      z-index: 20;
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--r-xl);
+      padding: 26px 30px 22px;
+      box-shadow: var(--sh-lg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      min-width: 230px;
+      max-width: min(88vw, 340px);
+      animation: slideUpIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both;
     }
-    #game-over button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 20px;
-      background-color: #27ae60;
-      color: white;
-      border: none;
-      border-radius: 5px;
+    .start-logo {
+      font-size: 54px;
+      line-height: 1.1;
+      animation: floatBob 3s ease-in-out infinite;
+    }
+    .start-title {
+      font-size: clamp(22px, 7.5vw, 34px);
+      font-weight: 800;
+      color: var(--clr-text);
+      margin: 4px 0 10px;
+      letter-spacing: -0.5px;
+    }
+    .start-cta {
+      font-size: clamp(13px, 4vw, 16px);
+      color: var(--clr-accent);
+      font-weight: 600;
+      margin-bottom: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    #start-high-score {
+      font-size: clamp(12px, 3.5vw, 14px);
+      color: var(--clr-gold);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* ── Pause Overlay ─────────────────────────────────────── */
+    #pause-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 25;
+      background: rgba(0, 0, 0, 0.58);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--clr-text);
+      text-align: center;
       cursor: pointer;
+    }
+    #pause-overlay.visible {
+      display: flex;
+      animation: fadeIn var(--dur-std) ease;
+    }
+    #pause-overlay .pause-icon {
+      font-size: 60px;
+      line-height: 1;
+      margin-bottom: 10px;
+      filter: drop-shadow(0 0 16px rgba(0,212,255,0.5));
+    }
+    #pause-overlay h2 {
+      font-size: clamp(26px, 9vw, 42px);
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+      margin-bottom: 10px;
+    }
+    #pause-overlay p {
+      font-size: clamp(12px, 3.8vw, 15px);
+      color: var(--clr-text-dim);
+    }
+
+    /* ── Game Over Screen ──────────────────────────────────── */
+    #game-over {
+      position: fixed;
+      inset: 0;
+      display: none;
+      background: rgba(0, 0, 0, 0.80);
+      z-index: 30;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .go-flex-wrap {
+      display: flex;
+      min-height: 100%;
+      align-items: center;
+      justify-content: center;
+      padding: calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 80px);
+    }
+    .game-over-card {
+      background: var(--clr-card);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--r-xl);
+      padding: 24px 20px 20px;
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+      color: var(--clr-text);
+      box-shadow: var(--sh-lg);
+      animation: slideUpIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+    }
+    .go-title {
+      font-size: clamp(24px, 7.5vw, 34px);
+      font-weight: 800;
+      color: var(--clr-red);
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(231,76,60,0.4);
+    }
+    #medal-display {
+      min-height: 28px;
+      margin-bottom: 10px;
+    }
+    #final-score {
+      font-size: clamp(28px, 9.5vw, 46px) !important;
+      font-weight: 800 !important;
+      color: var(--clr-text) !important;
+      letter-spacing: -1px;
+      margin: 2px 0 !important;
     }
     #high-score {
-      margin-top: 10px;
-      font-size: 20px;
+      font-size: clamp(13px, 3.8vw, 16px) !important;
+      color: var(--clr-gold) !important;
+      font-weight: 600 !important;
+      margin: 0 0 10px !important;
     }
-    /* Pause button using our safe-area variables */
-    #pause-button {
-      position: absolute;
-      top: calc(20px + var(--safe-top));
-      right: calc(20px + var(--safe-right));
-      z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
+    #stats-display {
+      font-size: 11px;
+      color: var(--clr-text-mute);
+      margin-bottom: 8px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: var(--r-sm);
+      line-height: 1.5;
     }
-    /* Bottom controls container – moved up */
-    #bottom-controls {
-      position: absolute;
-      bottom: calc(150px + env(safe-area-inset-bottom, 0px));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
+    #coins-earned {
+      font-size: clamp(14px, 4.5vw, 17px);
+      color: var(--clr-gold);
+      font-weight: 700;
+      min-height: 22px;
+      margin: 6px 0 14px;
+    }
+    /* Game-over action layout */
+    .go-primary-actions {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: flex-end;
-      max-width: calc(100% - 20px);
+      flex-direction: column;
       gap: 10px;
-      padding: 5px;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 5px;
+      margin-bottom: 10px;
     }
-    /* Bottom selection groups – reduced text and button sizes */
-    #mode-selection, #difficulty-selection, #skin-selection {
-      text-align: center;
-      color: white;
-    }
-    #mode-selection h2,
-    #difficulty-selection h2,
-    #skin-selection h2 {
-      font-size: 14px;
-      margin-bottom: 3px;
-      text-shadow: 1px 1px 2px #000;
-    }
-    .mode-buttons,
-    .difficulty-buttons,
-    .skin-buttons {
+    .go-action-row {
       display: flex;
+      gap: 10px;
+    }
+    .go-action-row button { flex: 1; }
+    .go-settings-hint {
+      font-size: 11px;
+      color: var(--clr-text-mute);
+      margin-top: 14px;
+    }
+
+    /* ── Game-Over Buttons ─────────────────────────────────── */
+    #restart-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      min-height: 50px;
+      font-size: clamp(15px, 4.5vw, 18px);
+      border-radius: var(--r-md);
+      background: var(--clr-green);
+      color: var(--clr-text);
+      box-shadow: var(--sh-sm);
+    }
+    #restart-button:hover { background: var(--clr-green-hi); }
+
+    #continue-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      font-size: clamp(12px, 3.6vw, 14px);
+      border-radius: var(--r-md);
+      background: var(--clr-orange);
+      color: var(--clr-text);
+      box-shadow: var(--sh-sm);
+      padding: 0 10px;
+    }
+    #continue-button:hover { filter: brightness(1.12); }
+    #continue-button:disabled {
+      background: rgba(255,255,255,0.09);
+      color: var(--clr-text-mute);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    #continue-button:disabled:active { transform: none; filter: none; }
+
+    #share-button {
+      display: flex;
+      align-items: center;
       justify-content: center;
       gap: 5px;
+      min-height: 46px;
+      font-size: clamp(12px, 3.6vw, 14px);
+      border-radius: var(--r-md);
+      background: rgba(0,212,255,0.15);
+      border: 1px solid var(--clr-accent);
+      color: var(--clr-accent);
+      box-shadow: var(--sh-sm);
+      padding: 0 10px;
     }
-    .mode-btn,
-    .difficulty-btn,
-    .skin-btn {
-      padding: 5px 10px;
-      font-size: 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      background-color: #ccc;
-    }
-    .mode-btn.selected,
-    .difficulty-btn.selected,
-    .skin-btn.selected {
-      background-color: #27ae60;
-      color: white;
-    }
-    /* Mute button */
-    #mute-button {
-      position: absolute;
-      top: calc(20px + var(--safe-top));
-      right: calc(70px + var(--safe-right));
-      z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-    }
-    /* 10. Hover/focus styles for buttons */
-    .mode-btn:hover, .difficulty-btn:hover, .skin-btn:hover {
-      filter: brightness(1.2);
-    }
-    .mode-btn:focus, .difficulty-btn:focus, .skin-btn:focus {
-      outline: 2px solid #fff;
-      filter: brightness(1.2);
-    }
-    #game-over button:hover {
-      filter: brightness(1.2);
-      background-color: #2ecc71;
-    }
-    #game-over button:focus {
-      outline: 2px solid #fff;
-      filter: brightness(1.2);
-    }
-    #pause-button:hover, #mute-button:hover {
-      background: rgba(0,0,0,0.7);
-    }
-    #pause-button:focus, #mute-button:focus {
-      outline: 2px solid #fff;
-      background: rgba(0,0,0,0.7);
-    }
-    /* 5. Name input modal */
-    #name-input-modal {
-      position: absolute;
-      top: 0;
-      left: 0;
+    #share-button:hover { background: rgba(0,212,255,0.25); }
+
+    #rewarded-ad-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.7);
+      min-height: 44px;
+      font-size: clamp(12px, 3.8vw, 15px);
+      border-radius: var(--r-md);
+      background: var(--clr-purple);
+      color: var(--clr-text);
+      box-shadow: var(--sh-sm);
+    }
+    #rewarded-ad-btn:hover { filter: brightness(1.12); }
+    #rewarded-ad-btn:disabled {
+      background: rgba(255,255,255,0.09);
+      color: var(--clr-text-mute);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    #rewarded-ad-btn:disabled:active { transform: none; filter: none; }
+
+    /* ── Name Input Modal ──────────────────────────────────── */
+    #name-input-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.80);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 60;
-    }
-    #name-input-modal.visible {
-      display: flex;
-    }
-    #name-input-modal .modal-content {
-      background: #333;
       padding: 20px;
-      border-radius: 10px;
+    }
+    #name-input-modal.visible { display: flex; }
+    #name-input-modal .modal-content {
+      background: var(--clr-card);
+      border: 1px solid var(--clr-border);
+      padding: 28px 22px;
+      border-radius: var(--r-xl);
       text-align: center;
-      color: white;
-    }
-    #name-input-modal input {
-      padding: 8px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin: 10px 0;
-      width: 200px;
-    }
-    #name-input-modal button {
-      padding: 8px 20px;
-      font-size: 16px;
-      background-color: #27ae60;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin: 5px;
-    }
-    #name-input-modal button:hover {
-      filter: brightness(1.2);
-    }
-    /* Coin display */
-    #coin-display {
-      position: absolute;
-      top: calc(20px + var(--safe-top));
-      right: calc(120px + var(--safe-right));
-      z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 8px 12px;
-      border-radius: 5px;
-      color: #FFD700;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    /* Ad banner placeholder */
-    #ad-banner {
-      position: absolute;
-      bottom: 0;
-      left: 0;
+      color: var(--clr-text);
       width: 100%;
-      height: 50px;
-      background: rgba(0,0,0,0.7);
+      max-width: 340px;
+      box-shadow: var(--sh-lg);
+      animation: slideUpIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+    }
+    #name-input-modal .modal-content h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--clr-gold);
+      margin-bottom: 8px;
+    }
+    #name-input-modal .modal-content p {
+      font-size: 14px;
+      color: var(--clr-text-dim);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+    #player-name-input {
+      display: block;
+      width: 100%;
+      padding: 13px 14px;
+      font-size: 16px;
+      border-radius: var(--r-md);
+      border: 2px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: var(--clr-text);
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color var(--dur-fast);
+    }
+    #player-name-input:focus { border-color: var(--clr-accent); }
+    .modal-actions {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 45;
-      color: #aaa;
-      font-size: 13px;
-      font-family: monospace;
-      border-top: 1px solid rgba(255,255,255,0.15);
+      gap: 10px;
     }
-    #ad-banner.hidden { display: none; }
-    /* Remove-ads button */
-    #remove-ads-btn {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: #c0392b;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      padding: 4px 10px;
-      font-size: 11px;
-      cursor: pointer;
+    .modal-actions button { flex: 1; }
+    #name-submit-btn {
+      min-height: 46px;
+      font-size: 15px;
+      border-radius: var(--r-md);
+      background: var(--clr-green);
+      color: var(--clr-text);
     }
-    #remove-ads-btn:hover { filter: brightness(1.2); }
-    /* Donate button */
-    #donate-button {
-      position: absolute;
-      top: calc(60px + var(--safe-top));
-      right: calc(20px + var(--safe-right));
-      z-index: 40;
-      background: #e74c3c;
-      padding: 8px 12px;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: bold;
-      text-decoration: none;
-      display: inline-block;
+    #name-submit-btn:hover { background: var(--clr-green-hi); }
+    #name-skip-btn {
+      min-height: 46px;
+      font-size: 15px;
+      border-radius: var(--r-md);
+      background: rgba(255,255,255,0.09);
+      border: 1px solid var(--clr-border);
+      color: var(--clr-text-dim);
     }
-    #donate-button:hover { filter: brightness(1.15); background: #c0392b; }
-    /* Coin shop modal */
+    #name-skip-btn:hover { background: rgba(255,255,255,0.16); }
+
+    /* ── Coin Shop Modal ───────────────────────────────────── */
     #coin-shop-modal {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 70;
+      padding: 20px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #coin-shop-modal.visible { display: flex; }
     #coin-shop-modal .shop-content {
-      background: linear-gradient(135deg, #2c3e50, #34495e);
-      padding: 24px;
-      border-radius: 12px;
+      background: linear-gradient(158deg, #182845, #0d1e38);
+      border: 1px solid rgba(255,215,0,0.28);
+      padding: 24px 20px;
+      border-radius: var(--r-xl);
       text-align: center;
-      color: white;
-      max-width: 340px;
-      width: 90%;
-      border: 2px solid #FFD700;
+      color: var(--clr-text);
+      max-width: 360px;
+      width: 100%;
+      box-shadow: var(--sh-lg), 0 0 48px rgba(255,215,0,0.07);
+      animation: slideUpIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both;
     }
     #coin-shop-modal .shop-content h2 {
-      color: #FFD700;
-      margin-top: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--clr-gold);
+      margin-bottom: 4px;
+    }
+    #shop-coin-balance {
+      font-size: 14px;
+      color: var(--clr-text-dim);
+      margin-bottom: 16px;
     }
     .shop-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06);
       margin: 8px 0;
-      padding: 10px 14px;
-      border-radius: 8px;
+      padding: 12px 14px;
+      border-radius: var(--r-md);
+      border: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
     }
-    .shop-item .item-label { font-size: 15px; }
-    .shop-item .item-price {
-      font-size: 13px;
-      color: #95a5a6;
-      font-style: italic;
-    }
+    .shop-item .item-label { font-size: 15px; font-weight: 600; }
+    .shop-item .item-price { font-size: 12px; color: var(--clr-text-mute); margin-top: 2px; }
     .shop-item button {
-      background: #27ae60;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      padding: 6px 14px;
+      background: var(--clr-green);
+      color: var(--clr-text);
+      border-radius: var(--r-sm);
+      padding: 0 14px;
+      min-height: 36px;
+      min-width: 70px;
       font-size: 13px;
-      cursor: pointer;
+      flex-shrink: 0;
     }
-    .shop-item button:hover { filter: brightness(1.15); }
+    .shop-item button:hover { filter: brightness(1.14); }
     .shop-item button:disabled {
-      background: #555;
+      background: rgba(255,255,255,0.1);
+      color: var(--clr-text-mute);
       cursor: not-allowed;
-      filter: none;
     }
+    .shop-item button:disabled:active { transform: none; filter: none; }
     #shop-close-btn {
-      margin-top: 12px;
-      background: #e74c3c;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      margin-top: 14px;
+      min-height: 46px;
       font-size: 15px;
-      cursor: pointer;
+      border-radius: var(--r-md);
+      background: var(--clr-red);
+      color: var(--clr-text);
     }
-    #shop-close-btn:hover { filter: brightness(1.15); }
-    /* Coin shop open button */
-    #shop-button {
+    #shop-close-btn:hover { filter: brightness(1.14); }
+
+    /* ── Ad Banner ─────────────────────────────────────────── */
+    #ad-banner {
       position: absolute;
-      top: calc(60px + var(--safe-top));
-      right: calc(120px + var(--safe-right));
-      z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 8px 12px;
-      border-radius: 5px;
-      color: #FFD700;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: bold;
+      bottom: 0;
+      left: 0; right: 0;
+      height: 48px;
+      background: rgba(0,0,0,0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 45;
+      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      gap: 8px;
+      padding-bottom: var(--safe-bottom);
     }
-    #shop-button:hover { background: rgba(0,0,0,0.7); }
-    /* Continue button on game-over */
-    #continue-button {
-      margin-top: 8px;
-      padding: 10px 20px;
-      font-size: 18px;
-      background-color: #e67e22;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+    #ad-banner.hidden { display: none; }
+    #remove-ads-btn {
+      background: var(--clr-red);
+      color: var(--clr-text);
+      border-radius: var(--r-sm);
+      padding: 0 10px;
+      min-height: 28px;
+      font-size: 11px;
+      white-space: nowrap;
     }
-    #continue-button:hover { filter: brightness(1.15); background-color: #d35400; }
-    #continue-button:disabled {
-      background-color: #555;
-      cursor: not-allowed;
-      filter: none;
+    #remove-ads-btn:hover { filter: brightness(1.14); }
+
+    /* ── Settings Panel (Bottom Sheet) ────────────────────── */
+    #bottom-controls {
+      position: absolute;
+      bottom: 48px; /* above ad banner */
+      left: 0; right: 0;
+      z-index: 20;
+      background: var(--clr-surface);
+      border-top: 1px solid var(--clr-border);
+      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 -6px 28px rgba(0,0,0,0.45);
+      display: flex;
+      flex-direction: column;
+      max-height: 44vh;
+      animation: panelSlideUp 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both;
     }
-    /* Coins earned notification on game over */
-    #coins-earned {
-      margin-top: 6px;
-      font-size: 16px;
-      color: #FFD700;
-    }
-    /* Premium skin lock indicator */
-    .skin-btn.locked {
+    .settings-header {
       position: relative;
-      opacity: 0.65;
-    }
-    .skin-btn .lock-icon {
-      font-size: 10px;
-      margin-left: 2px;
-    }
-    /* Rewarded ad button */
-    #rewarded-ad-btn {
-      margin-top: 6px;
-      padding: 8px 16px;
-      font-size: 14px;
-      background-color: #8e44ad;
-      color: white;
-      border: none;
-      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
       cursor: pointer;
     }
-    #rewarded-ad-btn:hover { filter: brightness(1.15); }
+    .settings-handle {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 34px;
+      height: 4px;
+      background: rgba(255,255,255,0.18);
+      border-radius: var(--r-pill);
+    }
+    .settings-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--clr-text-mute);
+      padding-top: 4px;
+    }
+    #settings-toggle-btn {
+      background: none;
+      color: var(--clr-text-dim);
+      font-size: 13px;
+      border-radius: var(--r-sm);
+      min-height: 28px;
+      min-width: 28px;
+      padding: 4px 8px;
+      transition: transform var(--dur-std);
+    }
+    #bottom-controls.collapsed #settings-toggle-btn { transform: rotate(180deg); }
+    #settings-body {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 10px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #bottom-controls.collapsed #settings-body { display: none; }
+
+    /* ── Settings Sections ─────────────────────────────────── */
+    #mode-selection, #difficulty-selection, #skin-selection {
+      text-align: center;
+      color: var(--clr-text);
+    }
+    #mode-selection h3, #difficulty-selection h3, #skin-selection h3 {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--clr-text-mute);
+      margin-bottom: 7px;
+    }
+    .mode-buttons, .difficulty-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    .mode-btn, .difficulty-btn {
+      padding: 0 18px;
+      min-height: 38px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-pill);
+      background: rgba(255,255,255,0.06);
+      color: var(--clr-text-dim);
+      transition: all var(--dur-fast);
+    }
+    .mode-btn.selected, .difficulty-btn.selected {
+      background: var(--clr-green);
+      color: var(--clr-text);
+      border-color: var(--clr-green);
+      box-shadow: 0 0 12px rgba(39,174,96,0.35);
+    }
+    .mode-btn:hover, .difficulty-btn:hover {
+      border-color: rgba(255,255,255,0.22);
+      filter: brightness(1.12);
+    }
+    .skin-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 7px;
+    }
+    .skin-btn {
+      min-width: 52px;
+      min-height: 38px;
+      padding: 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: var(--r-md);
+      background: rgba(255,255,255,0.06);
+      color: var(--clr-text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 90px;
+      transition: all var(--dur-fast);
+    }
+    .skin-btn.selected {
+      border-color: var(--clr-gold);
+      background: rgba(255,215,0,0.13);
+      color: var(--clr-text);
+      box-shadow: 0 0 10px rgba(255,215,0,0.3);
+    }
+    .skin-btn.locked { opacity: 0.55; }
+    .skin-btn .lock-icon { font-size: 10px; margin-left: 2px; }
+    .skin-btn:hover { filter: brightness(1.18); }
   </style>
 </head>
 <body>
   <div id="game-container">
+    <!-- Canvas: rendered behind all UI layers -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- ── HUD: Live Score (center-top) ──────────────────── -->
     <div id="score-display" aria-live="polite">0</div>
     <div id="combo-display"></div>
-    <div id="fps-counter">FPS: --</div>
-    <div id="leaderboard">
-      <strong>Leaderboard</strong>
-      <div id="leaderboard-list"></div>
-    </div>
-    <div id="achievement-notification" aria-live="polite"></div>
-    <div id="start-message">Tap or press ↑ to Start and Flap!<p id="start-high-score"></p></div>
-    
-    <!-- Bottom Controls: Mode, Difficulty, and Skin Selections -->
-    <div id="bottom-controls">
-      <div id="mode-selection">
-        <h2>Select Mode</h2>
-        <div class="mode-buttons">
-          <button id="classic-btn" class="mode-btn selected" aria-label="Classic mode">Classic</button>
-          <button id="challenge-btn" class="mode-btn" aria-label="Challenge mode">Challenge</button>
-        </div>
-      </div>
-      <div id="difficulty-selection">
-        <h2>Select Difficulty</h2>
-        <div class="difficulty-buttons">
-          <button id="easy-btn" class="difficulty-btn" aria-label="Easy difficulty">Easy</button>
-          <button id="medium-btn" class="difficulty-btn selected" aria-label="Medium difficulty">Medium</button>
-          <button id="hard-btn" class="difficulty-btn" aria-label="Hard difficulty">Hard</button>
-        </div>
-      </div>
-      <div id="skin-selection">
-        <h2>Select Dragon Skin</h2>
-        <div class="skin-buttons">
-          <button id="red-skin-btn" class="skin-btn selected" aria-label="Red dragon skin">Red</button>
-          <button id="blue-skin-btn" class="skin-btn" aria-label="Blue dragon skin">Blue</button>
-          <button id="green-skin-btn" class="skin-btn" aria-label="Green dragon skin">Green</button>
-          <button id="pink-skin-btn" class="skin-btn" aria-label="Pink dragon skin">Pink</button>
-          <button id="gold-skin-btn" class="skin-btn" aria-label="Gold dragon skin">Gold</button>
-          <button id="silver-skin-btn" class="skin-btn" aria-label="Silver dragon skin">Silver</button>
-          <button id="diamond-skin-btn" class="skin-btn locked" aria-label="Diamond dragon skin (Premium)" data-cost="100">Diamond 🔒</button>
-          <button id="shadow-skin-btn" class="skin-btn locked" aria-label="Shadow dragon skin (Premium)" data-cost="200">Shadow 🔒</button>
-        </div>
-      </div>
-    </div>
-    
-    <div id="game-over">
-      Game Over!
-      <div id="medal-display"></div>
-      <div id="final-score">Score: 0</div>
-      <div id="high-score">High Score: 0</div>
-      <div id="stats-display"></div>
-      <button id="restart-button" aria-label="Restart game">Restart</button>
-      <button id="continue-button" aria-label="Continue game for coins">Continue (50 🪙)</button>
-      <button id="share-button" aria-label="Share score">Share Score</button>
-      <div id="coins-earned"></div>
-      <button id="rewarded-ad-btn" aria-label="Watch ad for bonus coins">📺 Watch Ad (+25 🪙)</button>
-    </div>
-    <div id="name-input-modal">
-      <div class="modal-content">
-        <h2>Game Over!</h2>
-        <p>Enter your name for the leaderboard:</p>
-        <input type="text" id="player-name-input" maxlength="20" placeholder="Your name" aria-label="Player name" />
-        <br>
-        <button id="name-submit-btn" aria-label="Submit name">Submit</button>
-        <button id="name-skip-btn" aria-label="Skip name entry">Skip</button>
-      </div>
-    </div>
+
+    <!-- ── HUD: Coin balance (top-left) ─────────────────── -->
     <div id="coin-display" aria-live="polite">🪙 0</div>
-    <div id="shop-button" role="button" aria-label="Open coin shop" tabindex="0">🛒 Shop</div>
-    <a id="donate-button" href="https://buymeacoffee.com/14Spartan117" target="_blank" rel="noopener noreferrer" aria-label="Support the developer">❤️ Donate</a>
+
+    <!-- ── HUD: Mute + Pause (top-right) ────────────────── -->
     <div id="mute-button" role="button" aria-label="Toggle mute" tabindex="0">🔊</div>
     <div id="pause-button" role="button" aria-label="Pause game" tabindex="0">Pause</div>
-    <!-- Ad Banner Placeholder -->
-    <div id="ad-banner">
-      <span>[ Ad Space — Integrate your ad provider here ]</span>
-      <button id="remove-ads-btn" aria-label="Remove ads for coins">Remove Ads (500 🪙)</button>
+
+    <!-- ── HUD: Shop + Donate ───────────────────────────── -->
+    <div id="shop-button" role="button" aria-label="Open coin shop" tabindex="0">🛒 Shop</div>
+    <a id="donate-button" href="https://buymeacoffee.com/14Spartan117" target="_blank" rel="noopener noreferrer" aria-label="Support the developer">❤️</a>
+
+    <!-- ── HUD: FPS (bottom-right, dev mode) ────────────── -->
+    <div id="fps-counter">FPS: --</div>
+
+    <!-- ── Leaderboard (top-left, below coin) ───────────── -->
+    <div id="leaderboard">
+      <strong>🏆 Top Scores</strong>
+      <div id="leaderboard-list"></div>
     </div>
-    <!-- Coin Shop Modal -->
+
+    <!-- ── Achievement Toast ─────────────────────────────── -->
+    <div id="achievement-notification" aria-live="polite"></div>
+
+    <!-- ── Start Screen ───────────────────────────────────── -->
+    <div id="start-message">
+      <div class="start-logo">🐉</div>
+      <h1 class="start-title">Dragon Flight</h1>
+      <p class="start-cta">Tap anywhere to start!</p>
+      <p id="start-high-score"></p>
+    </div>
+
+    <!-- ── Pause Overlay (new) ───────────────────────────── -->
+    <div id="pause-overlay" role="dialog" aria-modal="true" aria-label="Game paused">
+      <div class="pause-icon">⏸</div>
+      <h2>Paused</h2>
+      <p>Tap here or press Space to resume</p>
+    </div>
+
+    <!-- ── Game Over Screen ──────────────────────────────── -->
+    <div id="game-over">
+      <div class="go-flex-wrap">
+        <div class="game-over-card">
+          <h2 class="go-title">Game Over</h2>
+          <div id="medal-display"></div>
+          <div id="final-score">Score: 0</div>
+          <div id="high-score">High Score: 0</div>
+          <div id="stats-display"></div>
+          <div id="coins-earned"></div>
+          <div class="go-primary-actions">
+            <button id="restart-button" aria-label="Restart game">🔄 Play Again</button>
+            <div class="go-action-row">
+              <button id="continue-button" aria-label="Continue game for coins">Continue (50 🪙)</button>
+              <button id="share-button" aria-label="Share score">📤 Share</button>
+            </div>
+          </div>
+          <button id="rewarded-ad-btn" aria-label="Watch ad for bonus coins">📺 Watch Ad (+25 🪙)</button>
+          <p class="go-settings-hint">Change settings below ↓</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Name Input Modal ───────────────────────────────── -->
+    <div id="name-input-modal">
+      <div class="modal-content">
+        <h2>New High Score! 🏆</h2>
+        <p>Enter your name for the leaderboard:</p>
+        <input type="text" id="player-name-input" maxlength="20" placeholder="Your name" aria-label="Player name" autocomplete="off" />
+        <div class="modal-actions">
+          <button id="name-submit-btn" aria-label="Submit name">Submit</button>
+          <button id="name-skip-btn" aria-label="Skip name entry">Skip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Coin Shop Modal ────────────────────────────────── -->
     <div id="coin-shop-modal">
       <div class="shop-content">
         <h2>🛒 Coin Shop</h2>
@@ -625,10 +1029,54 @@
           </div>
           <button id="buy-shadow-btn" aria-label="Unlock Shadow skin">Unlock</button>
         </div>
-        <button id="shop-close-btn" aria-label="Close shop">Close</button>
+        <button id="shop-close-btn" aria-label="Close shop">✕ Close</button>
       </div>
     </div>
-    <canvas id="game-canvas"></canvas>
+
+    <!-- ── Ad Banner (bottom strip) ──────────────────────── -->
+    <div id="ad-banner">
+      <span>[ Ad Space ]</span>
+      <button id="remove-ads-btn" aria-label="Remove ads for coins">Remove Ads (500 🪙)</button>
+    </div>
+
+    <!-- ── Settings Panel (bottom sheet) ─────────────────── -->
+    <div id="bottom-controls">
+      <div class="settings-header" id="settings-header-toggle">
+        <div class="settings-handle"></div>
+        <span class="settings-title">⚙ Settings</span>
+        <button id="settings-toggle-btn" aria-label="Toggle settings panel" aria-expanded="true">▼</button>
+      </div>
+      <div id="settings-body">
+        <div id="mode-selection">
+          <h3>Mode</h3>
+          <div class="mode-buttons">
+            <button id="classic-btn" class="mode-btn selected" aria-label="Classic mode">Classic</button>
+            <button id="challenge-btn" class="mode-btn" aria-label="Challenge mode">⚡ Challenge</button>
+          </div>
+        </div>
+        <div id="difficulty-selection">
+          <h3>Difficulty</h3>
+          <div class="difficulty-buttons">
+            <button id="easy-btn" class="difficulty-btn" aria-label="Easy difficulty">Easy</button>
+            <button id="medium-btn" class="difficulty-btn selected" aria-label="Medium difficulty">Medium</button>
+            <button id="hard-btn" class="difficulty-btn" aria-label="Hard difficulty">Hard</button>
+          </div>
+        </div>
+        <div id="skin-selection">
+          <h3>Dragon Skin</h3>
+          <div class="skin-buttons">
+            <button id="red-skin-btn" class="skin-btn selected" aria-label="Red dragon skin">Red</button>
+            <button id="blue-skin-btn" class="skin-btn" aria-label="Blue dragon skin">Blue</button>
+            <button id="green-skin-btn" class="skin-btn" aria-label="Green dragon skin">Green</button>
+            <button id="pink-skin-btn" class="skin-btn" aria-label="Pink dragon skin">Pink</button>
+            <button id="gold-skin-btn" class="skin-btn" aria-label="Gold dragon skin">Gold</button>
+            <button id="silver-skin-btn" class="skin-btn" aria-label="Silver dragon skin">Silver</button>
+            <button id="diamond-skin-btn" class="skin-btn locked" aria-label="Diamond dragon skin (Premium)" data-cost="100">Diamond 🔒</button>
+            <button id="shadow-skin-btn" class="skin-btn locked" aria-label="Shadow dragon skin (Premium)" data-cost="200">Shadow 🔒</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   
   <script>
@@ -1859,7 +2307,7 @@
         saveStats();
 
         updateHighScore();
-        gameOverMessage.style.display = 'block';
+        gameOverMessage.style.display = 'flex';
 
         // --- Feature 13: Show medal ---
         const medal = getMedal(score);
@@ -2125,6 +2573,43 @@
       startHighScore.innerText = highScore > 0 ? `High Score: ${highScore}` : '';
       updateLeaderboardDisplay();
       gameLoop();
+
+      // ── Mobile UI Additions ──────────────────────────────
+      // Pause overlay: sync with pause state
+      const pauseOverlay = document.getElementById('pause-overlay');
+      function syncPauseOverlay() {
+        pauseOverlay.classList.toggle('visible', paused);
+      }
+      // Layer additional listener on pause-button (existing listener runs first, toggling paused)
+      document.getElementById('pause-button').addEventListener('click', syncPauseOverlay);
+      // Tap on pause overlay to resume
+      pauseOverlay.addEventListener('click', () => {
+        if (paused) {
+          document.getElementById('pause-button').click();
+        }
+      });
+      // Space key also toggles pause; sync overlay after the existing Space handler fires
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+          // Defer so existing handler runs first
+          requestAnimationFrame(syncPauseOverlay);
+        }
+      });
+
+      // Settings panel collapse/expand toggle
+      const bottomControls = document.getElementById('bottom-controls');
+      const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+      const settingsHeaderToggle = document.getElementById('settings-header-toggle');
+
+      function toggleSettingsPanel() {
+        const isCollapsed = bottomControls.classList.toggle('collapsed');
+        settingsToggleBtn.setAttribute('aria-expanded', String(!isCollapsed));
+      }
+      settingsToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSettingsPanel();
+      });
+      settingsHeaderToggle.addEventListener('click', toggleSettingsPanel);
     });
   </script>
 </body>
