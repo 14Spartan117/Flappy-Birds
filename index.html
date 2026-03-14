@@ -145,35 +145,49 @@
     #achievement-notification.visible {
       opacity: 1;
     }
-    /* Game over sign remains at 40% */
+    /* Improved game over screen */
     #game-over {
       position: absolute;
-      top: 40%;
+      top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 30px;
+      font-size: 32px;
       font-weight: bold;
       color: white;
-      background-color: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(44,62,80,0.95), rgba(52,73,94,0.95));
+      padding: 24px;
+      border-radius: 16px;
       display: none;
       z-index: 30;
+      max-width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      border: 2px solid rgba(255,255,255,0.1);
     }
     #game-over button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 20px;
+      margin-top: 12px;
+      padding: 14px 24px;
+      font-size: 18px;
       background-color: #27ae60;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      min-height: 44px;
+      font-weight: 600;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     #high-score {
-      margin-top: 10px;
-      font-size: 20px;
+      margin-top: 12px;
+      font-size: 22px;
+      color: #FFD700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    #final-score {
+      margin-top: 8px;
+      font-size: 24px;
+      color: #3498db;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     }
     /* Pause button using our safe-area variables */
     #pause-button {
@@ -181,11 +195,16 @@
       top: calc(20px + var(--safe-top));
       right: calc(20px + var(--safe-right));
       z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 5px;
+      background: rgba(0,0,0,0.6);
+      padding: 12px 16px;
+      border-radius: 8px;
       color: white;
       cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 44px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     /* Bottom controls container – moved up */
     #bottom-controls {
@@ -204,7 +223,7 @@
       background: rgba(0, 0, 0, 0.5);
       border-radius: 5px;
     }
-    /* Bottom selection groups – reduced text and button sizes */
+    /* Bottom selection groups – improved for mobile touch targets */
     #mode-selection, #difficulty-selection, #skin-selection {
       text-align: center;
       color: white;
@@ -212,124 +231,204 @@
     #mode-selection h2,
     #difficulty-selection h2,
     #skin-selection h2 {
-      font-size: 14px;
-      margin-bottom: 3px;
-      text-shadow: 1px 1px 2px #000;
+      font-size: 16px;
+      margin-bottom: 8px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      font-weight: bold;
     }
     .mode-buttons,
     .difficulty-buttons,
     .skin-buttons {
       display: flex;
       justify-content: center;
-      gap: 5px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
-      padding: 5px 10px;
-      font-size: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
-      background-color: #ccc;
+      background-color: rgba(255,255,255,0.2);
+      color: white;
+      font-weight: 600;
+      min-height: 44px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     .mode-btn.selected,
     .difficulty-btn.selected,
     .skin-btn.selected {
       background-color: #27ae60;
       color: white;
+      box-shadow: 0 4px 8px rgba(39,174,96,0.4);
+      transform: translateY(-2px);
     }
     /* Mute button */
     #mute-button {
       position: absolute;
       top: calc(20px + var(--safe-top));
-      right: calc(70px + var(--safe-right));
+      right: calc(90px + var(--safe-right));
       z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 5px;
+      background: rgba(0,0,0,0.6);
+      padding: 12px 16px;
+      border-radius: 8px;
       color: white;
       cursor: pointer;
+      font-size: 18px;
+      min-height: 44px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
-    /* 10. Hover/focus styles for buttons */
+    /* Improved hover/focus styles for buttons */
     .mode-btn:hover, .difficulty-btn:hover, .skin-btn:hover {
-      filter: brightness(1.2);
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .mode-btn.selected:hover, .difficulty-btn.selected:hover, .skin-btn.selected:hover {
+      box-shadow: 0 6px 12px rgba(39,174,96,0.5);
     }
     .mode-btn:focus, .difficulty-btn:focus, .skin-btn:focus {
-      outline: 2px solid #fff;
-      filter: brightness(1.2);
+      outline: 3px solid #fff;
+      outline-offset: 2px;
+    }
+    .mode-btn:active, .difficulty-btn:active, .skin-btn:active {
+      transform: translateY(0px);
+    }
+    #game-over button {
+      transition: all 0.2s ease;
     }
     #game-over button:hover {
-      filter: brightness(1.2);
-      background-color: #2ecc71;
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
     #game-over button:focus {
-      outline: 2px solid #fff;
-      filter: brightness(1.2);
+      outline: 3px solid #fff;
+      outline-offset: 2px;
     }
-    #pause-button:hover, #mute-button:hover {
+    #game-over button:active {
+      transform: translateY(0px);
+    }
+    #pause-button:hover, #mute-button:hover, #shop-button:hover {
       background: rgba(0,0,0,0.7);
+      transform: scale(1.05);
     }
-    #pause-button:focus, #mute-button:focus {
-      outline: 2px solid #fff;
-      background: rgba(0,0,0,0.7);
+    #pause-button:focus, #mute-button:focus, #shop-button:focus {
+      outline: 3px solid #fff;
+      outline-offset: 2px;
     }
-    /* 5. Name input modal */
+    #pause-button:active, #mute-button:active, #shop-button:active {
+      transform: scale(0.98);
+    }
+    /* Improved name input modal with animations */
     #name-input-modal {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.8);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 60;
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
     #name-input-modal.visible {
       display: flex;
+      opacity: 1;
     }
     #name-input-modal .modal-content {
-      background: #333;
-      padding: 20px;
-      border-radius: 10px;
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      padding: 28px;
+      border-radius: 16px;
       text-align: center;
       color: white;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+      border: 2px solid rgba(255,255,255,0.15);
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+    #name-input-modal.visible .modal-content {
+      transform: scale(1);
+    }
+    #name-input-modal h2 {
+      margin-top: 0;
+      font-size: 24px;
+      color: #3498db;
+    }
+    #name-input-modal p {
+      color: #ecf0f1;
+      margin-bottom: 16px;
     }
     #name-input-modal input {
-      padding: 8px;
+      padding: 12px;
       font-size: 16px;
-      border-radius: 5px;
-      border: none;
-      margin: 10px 0;
-      width: 200px;
+      border-radius: 8px;
+      border: 2px solid rgba(255,255,255,0.2);
+      margin: 12px 0;
+      width: 100%;
+      max-width: 250px;
+      box-sizing: border-box;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      transition: border-color 0.2s ease;
+    }
+    #name-input-modal input:focus {
+      outline: none;
+      border-color: #3498db;
+      background: rgba(255,255,255,0.15);
+    }
+    #name-input-modal input::placeholder {
+      color: rgba(255,255,255,0.5);
     }
     #name-input-modal button {
-      padding: 8px 20px;
+      padding: 12px 24px;
       font-size: 16px;
       background-color: #27ae60;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
-      margin: 5px;
+      margin: 8px 5px;
+      min-height: 44px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     #name-input-modal button:hover {
-      filter: brightness(1.2);
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    #name-input-modal button:active {
+      transform: translateY(0px);
     }
     /* Coin display */
     #coin-display {
       position: absolute;
       top: calc(20px + var(--safe-top));
-      right: calc(120px + var(--safe-right));
+      right: calc(170px + var(--safe-right));
       z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 8px 12px;
-      border-radius: 5px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 14px;
+      border-radius: 8px;
       color: #FFD700;
       font-weight: bold;
       font-size: 16px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: all 0.2s ease;
     }
     /* Ad banner placeholder */
     #ad-banner {
@@ -367,146 +466,267 @@
     /* Donate button */
     #donate-button {
       position: absolute;
-      top: calc(60px + var(--safe-top));
+      top: calc(75px + var(--safe-top));
       right: calc(20px + var(--safe-right));
       z-index: 40;
       background: #e74c3c;
-      padding: 8px 12px;
-      border-radius: 5px;
+      padding: 10px 14px;
+      border-radius: 8px;
       color: white;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: bold;
       text-decoration: none;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
-    #donate-button:hover { filter: brightness(1.15); background: #c0392b; }
-    /* Coin shop modal */
+    #donate-button:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+    #donate-button:active {
+      transform: translateY(0px);
+    }
+    /* Improved coin shop modal with animations */
     #coin-shop-modal {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 70;
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
-    #coin-shop-modal.visible { display: flex; }
+    #coin-shop-modal.visible {
+      display: flex;
+      opacity: 1;
+    }
     #coin-shop-modal .shop-content {
       background: linear-gradient(135deg, #2c3e50, #34495e);
-      padding: 24px;
-      border-radius: 12px;
+      padding: 28px;
+      border-radius: 16px;
       text-align: center;
       color: white;
-      max-width: 340px;
+      max-width: 380px;
       width: 90%;
-      border: 2px solid #FFD700;
+      border: 3px solid #FFD700;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+    #coin-shop-modal.visible .shop-content {
+      transform: scale(1);
     }
     #coin-shop-modal .shop-content h2 {
       color: #FFD700;
       margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 26px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    #shop-coin-balance {
+      font-size: 18px;
+      font-weight: bold;
+      color: #FFD700;
+      margin-bottom: 16px;
+      padding: 8px;
+      background: rgba(255,215,0,0.1);
+      border-radius: 8px;
     }
     .shop-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255,255,255,0.1);
-      margin: 8px 0;
-      padding: 10px 14px;
-      border-radius: 8px;
+      background: rgba(255,255,255,0.15);
+      margin: 10px 0;
+      padding: 14px 16px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      border: 2px solid rgba(255,255,255,0.1);
     }
-    .shop-item .item-label { font-size: 15px; }
+    .shop-item:hover {
+      background: rgba(255,255,255,0.2);
+      transform: translateX(4px);
+    }
+    .shop-item .item-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+    }
     .shop-item .item-price {
-      font-size: 13px;
-      color: #95a5a6;
-      font-style: italic;
+      font-size: 14px;
+      color: #ecf0f1;
+      font-weight: normal;
+      margin-top: 4px;
     }
     .shop-item button {
       background: #27ae60;
       color: white;
       border: none;
-      border-radius: 5px;
-      padding: 6px 14px;
-      font-size: 13px;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
       cursor: pointer;
+      font-weight: 600;
+      min-height: 40px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
-    .shop-item button:hover { filter: brightness(1.15); }
+    .shop-item button:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    .shop-item button:active {
+      transform: translateY(0px);
+    }
     .shop-item button:disabled {
       background: #555;
       cursor: not-allowed;
       filter: none;
+      opacity: 0.6;
+      transform: none;
     }
     #shop-close-btn {
-      margin-top: 12px;
+      margin-top: 16px;
       background: #e74c3c;
       color: white;
       border: none;
-      border-radius: 5px;
-      padding: 8px 24px;
-      font-size: 15px;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 16px;
       cursor: pointer;
+      font-weight: 600;
+      min-height: 44px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    #shop-close-btn:hover { filter: brightness(1.15); }
+    #shop-close-btn:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    #shop-close-btn:active {
+      transform: translateY(0px);
+    }
     /* Coin shop open button */
     #shop-button {
       position: absolute;
-      top: calc(60px + var(--safe-top));
-      right: calc(120px + var(--safe-right));
+      top: calc(75px + var(--safe-top));
+      right: calc(170px + var(--safe-right));
       z-index: 40;
-      background: rgba(0,0,0,0.5);
-      padding: 8px 12px;
-      border-radius: 5px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 14px;
+      border-radius: 8px;
       color: #FFD700;
       cursor: pointer;
       font-size: 14px;
       font-weight: bold;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
-    #shop-button:hover { background: rgba(0,0,0,0.7); }
+    #shop-button:hover {
+      background: rgba(0,0,0,0.7);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    }
+    #shop-button:active {
+      transform: translateY(0px);
+    }
     /* Continue button on game-over */
     #continue-button {
-      margin-top: 8px;
-      padding: 10px 20px;
+      margin-top: 10px;
+      padding: 14px 24px;
       font-size: 18px;
       background-color: #e67e22;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      min-height: 44px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    #continue-button:hover { filter: brightness(1.15); background-color: #d35400; }
+    #continue-button:hover {
+      filter: brightness(1.15);
+      background-color: #d35400;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    #continue-button:active {
+      transform: translateY(0px);
+    }
     #continue-button:disabled {
-      background-color: #555;
+      background-color: #7f8c8d;
       cursor: not-allowed;
       filter: none;
+      opacity: 0.6;
+      transform: none;
     }
     /* Coins earned notification on game over */
     #coins-earned {
-      margin-top: 6px;
-      font-size: 16px;
+      margin-top: 10px;
+      font-size: 18px;
       color: #FFD700;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     }
     /* Premium skin lock indicator */
     .skin-btn.locked {
       position: relative;
-      opacity: 0.65;
+      opacity: 0.75;
+      border: 2px solid rgba(255,215,0,0.3);
     }
     .skin-btn .lock-icon {
-      font-size: 10px;
-      margin-left: 2px;
+      font-size: 12px;
+      margin-left: 4px;
     }
     /* Rewarded ad button */
     #rewarded-ad-btn {
-      margin-top: 6px;
-      padding: 8px 16px;
-      font-size: 14px;
+      margin-top: 8px;
+      padding: 12px 20px;
+      font-size: 15px;
       background-color: #8e44ad;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      min-height: 44px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    #rewarded-ad-btn:hover { filter: brightness(1.15); }
+    #rewarded-ad-btn:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+    #rewarded-ad-btn:active {
+      transform: translateY(0px);
+    }
+    /* Stats display improvements */
+    #stats-display {
+      margin-top: 12px;
+      font-size: 15px;
+      color: #bdc3c7;
+      line-height: 1.6;
+      background: rgba(0,0,0,0.2);
+      padding: 10px;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
@@ -2030,6 +2250,17 @@
       });
   
       document.addEventListener('keydown', (e) => {
+        // Close modals with ESC key
+        if (e.code === 'Escape') {
+          if (coinShopModal.classList.contains('visible')) {
+            e.preventDefault();
+            coinShopModal.classList.remove('visible');
+          }
+          if (nameInputModal.classList.contains('visible')) {
+            e.preventDefault();
+            nameInputModal.classList.remove('visible');
+          }
+        }
         if (e.code === 'Space') {
           e.preventDefault();
           paused = !paused;
