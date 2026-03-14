@@ -27,7 +27,7 @@
       top: calc(70px + var(--safe-top));
       width: 100%;
       text-align: center;
-      font-size: 24px;
+      font-size: clamp(20px, 5vw, 28px);
       font-weight: bold;
       color: #FFD700;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
@@ -44,14 +44,14 @@
       color: #0f0;
       padding: 4px 8px;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: clamp(12px, 3vw, 14px);
       font-family: monospace;
       display: none;
     }
     /* Stats display on game over */
     #stats-display {
       margin-top: 8px;
-      font-size: 14px;
+      font-size: clamp(14px, 3.5vw, 18px);
       color: #ccc;
     }
     html, body {
@@ -92,7 +92,7 @@
       top: calc(20px + var(--safe-top));
       width: 100%;
       text-align: center;
-      font-size: 40px;
+      font-size: clamp(32px, 8vw, 48px);
       font-weight: bold;
       color: white;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -107,11 +107,11 @@
       color: white;
       padding: 10px;
       border-radius: 5px;
-      font-size: 16px;
+      font-size: clamp(14px, 3.5vw, 18px);
       max-width: 200px;
     }
     #start-high-score {
-      font-size: 20px;
+      font-size: clamp(18px, 4vw, 22px);
       margin: 5px 0 0 0;
     }
     /* Reduced start message size and padding */
@@ -121,20 +121,21 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 28px;
+      font-size: clamp(20px, 5vw, 32px);
       font-weight: bold;
       color: white;
       background-color: rgba(0,0,0,0.5);
-      padding: 10px;
+      padding: 15px;
       border-radius: 10px;
       z-index: 20;
+      max-width: 90%;
     }
     #achievement-notification {
       position: absolute;
       top: 40%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 36px;
+      font-size: clamp(28px, 7vw, 40px);
       color: yellow;
       text-shadow: 2px 2px 4px #000;
       opacity: 0;
@@ -152,7 +153,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 30px;
+      font-size: clamp(24px, 6vw, 36px);
       font-weight: bold;
       color: white;
       background-color: rgba(0,0,0,0.7);
@@ -160,20 +161,24 @@
       border-radius: 10px;
       display: none;
       z-index: 30;
+      max-width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     #game-over button {
       margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 20px;
+      padding: 12px 24px;
+      font-size: clamp(16px, 4vw, 22px);
       background-color: #27ae60;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      min-height: 44px;
     }
-    #high-score {
+    #high-score, #final-score {
       margin-top: 10px;
-      font-size: 20px;
+      font-size: clamp(18px, 4vw, 24px);
     }
     /* Pause button using our safe-area variables */
     #pause-button {
@@ -212,8 +217,8 @@
     #mode-selection h2,
     #difficulty-selection h2,
     #skin-selection h2 {
-      font-size: 14px;
-      margin-bottom: 3px;
+      font-size: clamp(14px, 3.5vw, 18px);
+      margin-bottom: 5px;
       text-shadow: 1px 1px 2px #000;
     }
     .mode-buttons,
@@ -221,17 +226,20 @@
     .skin-buttons {
       display: flex;
       justify-content: center;
-      gap: 5px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
-      padding: 5px 10px;
-      font-size: 12px;
+      padding: 8px 12px;
+      font-size: clamp(13px, 3vw, 16px);
       border: none;
       border-radius: 5px;
       cursor: pointer;
       background-color: #ccc;
+      min-height: 44px;
+      min-width: 60px;
     }
     .mode-btn.selected,
     .difficulty-btn.selected,
@@ -298,22 +306,23 @@
       color: white;
     }
     #name-input-modal input {
-      padding: 8px;
-      font-size: 16px;
+      padding: 10px;
+      font-size: clamp(16px, 4vw, 18px);
       border-radius: 5px;
       border: none;
       margin: 10px 0;
-      width: 200px;
+      width: min(250px, 80vw);
     }
     #name-input-modal button {
-      padding: 8px 20px;
-      font-size: 16px;
+      padding: 10px 24px;
+      font-size: clamp(16px, 4vw, 18px);
       background-color: #27ae60;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       margin: 5px;
+      min-height: 44px;
     }
     #name-input-modal button:hover {
       filter: brightness(1.2);
@@ -329,7 +338,7 @@
       border-radius: 5px;
       color: #FFD700;
       font-weight: bold;
-      font-size: 16px;
+      font-size: clamp(14px, 3.5vw, 18px);
     }
     /* Ad banner placeholder */
     #ad-banner {
@@ -337,14 +346,14 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 50px;
+      height: 60px;
       background: rgba(0,0,0,0.7);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 45;
       color: #aaa;
-      font-size: 13px;
+      font-size: clamp(12px, 3vw, 14px);
       font-family: monospace;
       border-top: 1px solid rgba(255,255,255,0.15);
     }
@@ -359,9 +368,10 @@
       color: white;
       border: none;
       border-radius: 3px;
-      padding: 4px 10px;
-      font-size: 11px;
+      padding: 6px 12px;
+      font-size: clamp(11px, 2.5vw, 13px);
       cursor: pointer;
+      min-height: 36px;
     }
     #remove-ads-btn:hover { filter: brightness(1.2); }
     /* Donate button */
@@ -371,11 +381,11 @@
       right: calc(20px + var(--safe-right));
       z-index: 40;
       background: #e74c3c;
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 5px;
       color: white;
       cursor: pointer;
-      font-size: 13px;
+      font-size: clamp(13px, 3vw, 15px);
       font-weight: bold;
       text-decoration: none;
       display: inline-block;
@@ -416,9 +426,9 @@
       padding: 10px 14px;
       border-radius: 8px;
     }
-    .shop-item .item-label { font-size: 15px; }
+    .shop-item .item-label { font-size: clamp(14px, 3.5vw, 17px); }
     .shop-item .item-price {
-      font-size: 13px;
+      font-size: clamp(12px, 3vw, 14px);
       color: #95a5a6;
       font-style: italic;
     }
@@ -427,9 +437,10 @@
       color: white;
       border: none;
       border-radius: 5px;
-      padding: 6px 14px;
-      font-size: 13px;
+      padding: 8px 16px;
+      font-size: clamp(13px, 3vw, 15px);
       cursor: pointer;
+      min-height: 40px;
     }
     .shop-item button:hover { filter: brightness(1.15); }
     .shop-item button:disabled {
@@ -443,9 +454,10 @@
       color: white;
       border: none;
       border-radius: 5px;
-      padding: 8px 24px;
-      font-size: 15px;
+      padding: 10px 26px;
+      font-size: clamp(15px, 3.5vw, 17px);
       cursor: pointer;
+      min-height: 44px;
     }
     #shop-close-btn:hover { filter: brightness(1.15); }
     /* Coin shop open button */
@@ -455,24 +467,25 @@
       right: calc(120px + var(--safe-right));
       z-index: 40;
       background: rgba(0,0,0,0.5);
-      padding: 8px 12px;
+      padding: 10px 14px;
       border-radius: 5px;
       color: #FFD700;
       cursor: pointer;
-      font-size: 14px;
+      font-size: clamp(14px, 3.5vw, 16px);
       font-weight: bold;
     }
     #shop-button:hover { background: rgba(0,0,0,0.7); }
     /* Continue button on game-over */
     #continue-button {
       margin-top: 8px;
-      padding: 10px 20px;
-      font-size: 18px;
+      padding: 12px 24px;
+      font-size: clamp(16px, 4vw, 20px);
       background-color: #e67e22;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      min-height: 44px;
     }
     #continue-button:hover { filter: brightness(1.15); background-color: #d35400; }
     #continue-button:disabled {
@@ -483,7 +496,7 @@
     /* Coins earned notification on game over */
     #coins-earned {
       margin-top: 6px;
-      font-size: 16px;
+      font-size: clamp(15px, 3.5vw, 18px);
       color: #FFD700;
     }
     /* Premium skin lock indicator */
@@ -492,21 +505,113 @@
       opacity: 0.65;
     }
     .skin-btn .lock-icon {
-      font-size: 10px;
+      font-size: clamp(10px, 2.5vw, 12px);
       margin-left: 2px;
     }
     /* Rewarded ad button */
     #rewarded-ad-btn {
       margin-top: 6px;
-      padding: 8px 16px;
-      font-size: 14px;
+      padding: 10px 18px;
+      font-size: clamp(14px, 3.5vw, 16px);
       background-color: #8e44ad;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      min-height: 44px;
     }
     #rewarded-ad-btn:hover { filter: brightness(1.15); }
+
+    /* Media queries for better mobile experience */
+    @media (max-width: 480px) {
+      /* Smaller screens - adjust spacing and sizes */
+      #bottom-controls {
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+        gap: 8px;
+        padding: 8px;
+      }
+
+      #leaderboard {
+        font-size: 12px;
+        padding: 6px;
+        max-width: 150px;
+      }
+
+      /* Stack skin buttons more aggressively */
+      .skin-buttons {
+        max-width: 280px;
+      }
+
+      /* Reduce top UI button sizes for very small screens */
+      #pause-button,
+      #mute-button,
+      #coin-display,
+      #shop-button,
+      #donate-button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      /* Adjust ad banner height */
+      #ad-banner {
+        height: 50px;
+        font-size: 11px;
+      }
+    }
+
+    @media (min-width: 768px) {
+      /* Tablet and larger - more generous spacing */
+      #bottom-controls {
+        gap: 15px;
+        padding: 10px;
+      }
+
+      .mode-buttons,
+      .difficulty-buttons,
+      .skin-buttons {
+        gap: 10px;
+      }
+
+      /* Larger touch targets on tablets */
+      .mode-btn,
+      .difficulty-btn,
+      .skin-btn {
+        min-height: 48px;
+        min-width: 70px;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      /* Landscape mobile - compact layout */
+      #bottom-controls {
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+        padding: 4px;
+      }
+
+      #mode-selection h2,
+      #difficulty-selection h2,
+      #skin-selection h2 {
+        font-size: 12px;
+        margin-bottom: 2px;
+      }
+
+      .mode-btn,
+      .difficulty-btn,
+      .skin-btn {
+        padding: 6px 10px;
+        min-height: 36px;
+      }
+
+      #start-message {
+        font-size: clamp(18px, 4vw, 24px);
+        padding: 10px;
+      }
+
+      #leaderboard {
+        font-size: 11px;
+        padding: 6px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -755,14 +860,16 @@
         if (birdInitialized) {
           bird.x = canvas.width / 4;
           if (!gameStarted) bird.y = canvas.height / 2;
+          // Update bird size on resize
+          bird.updateSize();
         }
       }
       let birdInitialized = false;
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
   
-      // Named constants
-      const GROUND_HEIGHT = 100;
+      // Named constants - now responsive to screen size
+      const getGroundHeight = () => Math.max(60, Math.min(100, canvas.height * 0.12));
       const PARTICLE_COUNT = 20;
       const PARTICLE_FADE_RATE = 0.02;
       const CLOUD_COUNT = 3;
@@ -781,10 +888,17 @@
         shadow: { cost: 200 }
       };
 
-      // Game variables
+      // Game variables - responsive sizing
       const gravity = 0.5;
       const jumpForce = -10;
-      const basePipeWidth = 80;
+      const getBasePipeWidth = () => Math.max(60, Math.min(80, canvas.width * 0.12));
+      const getBirdSize = () => {
+        const scale = Math.max(0.7, Math.min(1.2, canvas.width / 500));
+        return {
+          width: Math.floor(50 * scale),
+          height: Math.floor(40 * scale)
+        };
+      };
   
       // Difficulty settings
       const difficulties = {
@@ -1083,9 +1197,14 @@
       const bird = {
         x: canvas.width / 4,
         y: canvas.height / 2,
-        width: 50,
-        height: 40,
+        width: getBirdSize().width,
+        height: getBirdSize().height,
         velocity: 0,
+        updateSize() {
+          const size = getBirdSize();
+          this.width = size.width;
+          this.height = size.height;
+        },
         draw(ghost) {
           const skin = ghost ? { body: 'rgba(200,220,255,0.35)', wing: 'rgba(180,200,255,0.25)', head: 'rgba(200,220,255,0.35)', snout: 'rgba(180,200,255,0.25)', eye: 'rgba(255,255,255,0.4)' } : skins[selectedSkin];
           // --- Feature 2: velocity-based wing angle ---
@@ -1168,6 +1287,7 @@
         update(dt) {
           this.velocity += gravity * dt;
           this.y += this.velocity * dt;
+          const GROUND_HEIGHT = getGroundHeight();
           if (this.y + this.height / 2 > canvas.height - GROUND_HEIGHT) {
             this.y = canvas.height - GROUND_HEIGHT - this.height / 2;
             gameOver();
@@ -1194,8 +1314,9 @@
 
       function Pipe(x) {
         this.x = x;
-        this.width = basePipeWidth;
+        this.width = getBasePipeWidth();
         this.scored = false;
+        const GROUND_HEIGHT = getGroundHeight();
         const minGapY = pipeGap + GROUND_HEIGHT;
         const maxGapY = canvas.height - pipeGap - 2 * GROUND_HEIGHT;
         this.gapY = Math.random() * (maxGapY - minGapY) + minGapY;
@@ -1381,6 +1502,7 @@
 
         // --- Feature 7: Parallax — distant mountains ---
         if (gameRunning) parallaxOffset1 = (parallaxOffset1 + 0.3) % canvas.width;
+        const GROUND_HEIGHT = getGroundHeight();
         const mtnY = canvas.height - GROUND_HEIGHT - 120;
         ctx.fillStyle = `rgba(100,140,100,${0.3 + t * 0.3})`;
         for (let i = -1; i <= 2; i++) {
@@ -1452,6 +1574,7 @@
 
       // --- Feature 16: Bird Ground Shadow (projected onto ground) ---
       function drawBirdGroundShadow() {
+        const GROUND_HEIGHT = getGroundHeight();
         const groundY = canvas.height - GROUND_HEIGHT;
         // Visual y of bird = game y + cameraOffsetY (bird drawn inside camera transform)
         const visualBirdY = bird.y + cameraOffsetY;
