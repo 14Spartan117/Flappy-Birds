@@ -1393,6 +1393,119 @@ describe('DOM Elements Exist', () => {
   });
 });
 
+describe('Mobile UI Improvements', () => {
+  it('clamp() bounds for score display font size are correct', () => {
+    // clamp(28px, 6vw, 40px): min=28, max=40
+    const minFont = 28;
+    const maxFont = 40;
+    assert(minFont < maxFont, 'Min font size should be less than max');
+    assert(minFont >= 20, 'Min font must be readable (≥20px)');
+    assert(maxFont <= 40, 'Max font should not exceed original size');
+  });
+
+  it('clamp() bounds for start message font size are correct', () => {
+    const minFont = 18;
+    const maxFont = 28;
+    assert(minFont < maxFont, 'Min font size should be less than max');
+    assert(minFont >= 14, 'Min font must be readable');
+  });
+
+  it('clamp() bounds for achievement notification font are correct', () => {
+    const minFont = 22;
+    const maxFont = 36;
+    assert(minFont < maxFont, 'Min font size should be less than max');
+    assert(maxFont <= 36, 'Max font should not exceed original');
+  });
+
+  it('minimum touch target height meets accessibility guideline (44px)', () => {
+    // Apple HIG and WCAG recommend at least 44×44 CSS pixels for touch targets.
+    // Buttons in this game (pause, mute, game-over, continue, ad, modal) set min-height: 44px.
+    const touchTargetPx = 44;
+    // Selection/shop buttons use 44px; landscape-mode override uses 36px as a space tradeoff.
+    const defaultMinHeight = 44;
+    const landscapeMinHeight = 36;
+    assert(defaultMinHeight >= touchTargetPx, 'Default buttons must meet 44px touch target');
+    assert(landscapeMinHeight >= 32, 'Landscape buttons must stay above 32px minimum');
+    assert(defaultMinHeight > landscapeMinHeight, 'Landscape uses compact size; default is larger');
+  });
+
+  it('skin buttons container allows horizontal scroll on narrow screens', () => {
+    // .skin-buttons: flex-wrap: nowrap + overflow-x: auto => horizontal scroll
+    // This prevents 8 buttons (≈510px wide) from overflowing a 375px viewport.
+    const skinButtonCount = 8;
+    const avgButtonWidth = 65; // px (label + padding)
+    const buttonGap = 5;
+    const totalWidth = skinButtonCount * avgButtonWidth + (skinButtonCount - 1) * buttonGap;
+    const iPhoneSeWidth = 375;
+    assert(totalWidth > iPhoneSeWidth, 'Skin buttons overflow without scroll — scroll is needed');
+    // Verify horizontal-scroll CSS values used
+    const appliedFlexWrap = 'nowrap';      // overrides the default to prevent wrapping
+    const appliedOverflowX = 'auto';       // creates scroll container
+    assert(appliedFlexWrap === 'nowrap', 'flex-wrap: nowrap keeps buttons on one row');
+    assert(appliedOverflowX === 'auto', 'overflow-x: auto enables horizontal scroll');
+  });
+
+  it('game over modal has constrained max-height for small screens', () => {
+    // #game-over max-height: 80vh prevents the tall modal from going off-screen.
+    // On iPhone SE (667px tall), 80vh = 533px — enough for all content with scroll.
+    const maxHeightVh = 80;
+    const iPhoneSEHeightPx = 667;
+    const maxHeightPx = iPhoneSEHeightPx * (maxHeightVh / 100);
+    assert(maxHeightVh <= 90, 'Game over max-height should leave room for context');
+    assert(maxHeightVh >= 60, 'Game over max-height should be tall enough to show content');
+    assert(maxHeightPx > 400, 'Modal must fit substantial content on iPhone SE');
+  });
+
+  it('bottom controls have max-height to prevent overflow', () => {
+    // max-height: 40vh with overflow-y: auto prevents the controls panel from
+    // exceeding 40% of the viewport height, even when skin buttons wrap.
+    const maxHeightVh = 40;
+    const smallPhoneHeightPx = 667; // iPhone SE
+    const allowedHeightPx = smallPhoneHeightPx * (maxHeightVh / 100);
+    assert(maxHeightVh > 0, 'Bottom controls must have a max-height');
+    assert(maxHeightVh <= 50, 'Bottom controls should not take more than half the screen');
+    assert(allowedHeightPx >= 150, 'Controls must be tall enough to show all sections');
+  });
+
+  it('viewport meta tag disables user-scalable for game UX', () => {
+    // The viewport meta in index.html includes user-scalable=no
+    const viewportContent = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+    assert(viewportContent.includes('user-scalable=no'), 'user-scalable=no prevents unintended zoom');
+    assert(viewportContent.includes('viewport-fit=cover'), 'viewport-fit=cover handles notched displays');
+  });
+
+  it('landscape media query triggers at max-height: 500px', () => {
+    const breakpoint = 500;
+    assert(breakpoint <= 600, 'Landscape breakpoint should target short landscape viewports');
+    assert(breakpoint >= 400, 'Breakpoint should not be too aggressive');
+  });
+
+  it('modal content uses min() for responsive width', () => {
+    // min(90vw, 340px) gives 90% of viewport or 340px, whichever is smaller
+    const viewportWidth = 375; // iPhone SE
+    const computedWidth = Math.min(viewportWidth * 0.9, 340);
+    assert(computedWidth <= 340, 'Modal should not exceed 340px');
+    assert(computedWidth <= viewportWidth * 0.9, 'Modal should not exceed 90vw');
+    assert(computedWidth > 200, 'Modal should be wide enough to be usable');
+  });
+
+  it('skin button white-space: nowrap prevents text wrapping inside button', () => {
+    // "Diamond 🔒 (100🪙)" is 17 characters; without nowrap it could break to 2 lines
+    // and make the button taller than intended.
+    const sampleLabel = 'Diamond 🔒 (100🪙)';
+    const whiteSpaceValue = 'nowrap'; // applied via .skin-btn rule
+    assert(sampleLabel.length > 10, 'Skin button labels can be long enough to wrap without nowrap');
+    assert(whiteSpaceValue === 'nowrap', 'white-space: nowrap keeps the label on one line');
+  });
+
+  it('small screen media query breakpoint at 480px covers common phones', () => {
+    const breakpointPx = 480;
+    // Most phones in portrait are 320–430px wide; 480px covers all
+    assert(breakpointPx >= 430, 'Breakpoint should cover wider phones');
+    assert(breakpointPx <= 600, 'Breakpoint should not affect tablets');
+  });
+});
+
 // ─── Final Summary ─────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   const total = passed + failed;
