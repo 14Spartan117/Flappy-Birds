@@ -504,6 +504,7 @@ To execute the plan iteratively and safely, run updates in fixed batches and mar
 - [x] **Batch 14 executed**: Extracted input gating/toggle helpers into `src/core/input.js` and wired runtime/tests/CI.
 - [x] **Batch 15 executed**: Added deconflict guardrails (merge-marker checks + namespace conflict checks) and wired them into CI.
 - [x] **Batch 16 executed**: Added conflict-mitigation docs and `.gitattributes` union-merge rule for additive planning content.
+- [x] **Batch 17 executed**: Added `scripts/rebase_main_deconflict.sh` to automate rebase + validation steps when syncing with `main`.
 - [ ] Next: Continue extracting remaining UI flow orchestration concerns from `index.html`.
 
 ### Loop policy

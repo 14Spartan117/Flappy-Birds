@@ -11,3 +11,13 @@ If your branch conflicts with `main`, use this order:
    - all `node --check` commands from CI.
 
 This repository now has a union-merge rule for `IMPROVEMENTS_PLAN.md` to reduce plan-only conflicts.
+
+## One-command helper
+
+If your environment can access the upstream remote, run:
+
+```bash
+scripts/rebase_main_deconflict.sh origin/main
+```
+
+This helper fetches, rebases, checks merge markers, and runs regression checks.
