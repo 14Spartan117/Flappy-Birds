@@ -631,6 +631,14 @@
     <canvas id="game-canvas"></canvas>
   </div>
   
+  <script src="src/core/rules.js"></script>
+  <script src="src/core/stateMachine.js"></script>
+  <script src="src/core/storage.js"></script>
+  <script src="src/render/background.js"></script>
+  <script src="src/render/pipes.js"></script>
+  <script src="src/render/bird.js"></script>
+  <script src="src/render/hud.js"></script>
+  <script src="src/render/ground.js"></script>
   <script>
     // If hosted on GitHub, override safe-area variables and adjust container height.
     if (window.location.host.includes("github")) {
@@ -702,7 +710,14 @@
       }
 
       document.addEventListener('DOMContentLoaded', () => {
-      const canvas = document.getElementById('game-canvas');
+        const { computeProgressiveDifficulty, getComboMultiplier, getPipeColor, getMedal } = window.DragonRules;
+        const { safeLoadJSON, safeLoadNumber, loadSettings, saveSettings, safeSetJSON } = window.DragonStorage;
+        const { getDayNightBlend, getSkyColor, getCelestialAlpha, drawTwinklingStars, updateParallaxOffsets, drawParallaxLayers, updateAndDrawClouds } = window.DragonRenderBackground;
+        const { drawPipePair, drawPipeWarningOverlay, computeWarningAlpha } = window.DragonRenderPipes;
+        const { computeWingOffsets, computeTiltAngle } = window.DragonRenderBird;
+        const { renderComboText, renderFPS, calculateFPS } = window.DragonRenderHUD;
+        const { computeGroundOffset, drawGroundAndGrass, drawBirdGroundShadow: renderBirdGroundShadow } = window.DragonRenderGround;
+        const canvas = document.getElementById('game-canvas');
       const ctx = canvas.getContext('2d');
       const scoreDisplay = document.getElementById('score-display');
       const startMessage = document.getElementById('start-message');
@@ -768,6 +783,7 @@
       const CLOUD_COUNT = 3;
       const DAY_NIGHT_CYCLE_SPEED = 5000;
       const COUNTDOWN_SECONDS = 3;
+      const { GAME_STATES, createStateMachine } = window.DragonStateMachine;
       const TARGET_FRAME_MS = 16.67;
       const MAX_DT_MULTIPLIER = 3;
       const LEADERBOARD_MAX_ENTRIES = 10;
@@ -801,31 +817,39 @@
       let pipeSpawnRate = selectedDifficulty.pipeSpawnRate;
       let pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
   
-      let highScore = 0;
-      try {
-        highScore = localStorage.getItem('highScore') || 0;
-      } catch (e) {
-        highScore = 0;
+      function handleCorruptStorage(keyName) {
+        const shouldReset = typeof window.confirm === 'function'
+          ? window.confirm(`Saved data for "${keyName}" is corrupted and can be reset. Reset now?`)
+          : true;
+        if (shouldReset) {
+          try { localStorage.removeItem(keyName); } catch (e) {}
+        }
       }
+
+      let highScore = safeLoadNumber(localStorage, 'highScore', 0);
       highScoreDisplay.innerText = `High Score: ${highScore}`;
 
       // --- Monetization: Coin system ---
-      let coins = 0;
-      try {
-        coins = parseInt(localStorage.getItem('dragonCoins')) || 0;
-      } catch (e) {
-        coins = 0;
-      }
+      let coins = safeLoadNumber(localStorage, 'dragonCoins', 0);
       let unlockedSkins = new Set(['red', 'blue', 'green', 'pink', 'gold', 'silver']);
-      try {
-        const savedUnlocks = localStorage.getItem('unlockedSkins');
-        if (savedUnlocks) unlockedSkins = new Set(JSON.parse(savedUnlocks));
-      } catch (e) { /* storage unavailable */ }
-      let adsRemoved = false;
-      try {
-        adsRemoved = localStorage.getItem('adsRemoved') === 'true';
-      } catch (e) { /* storage unavailable */ }
+      const savedUnlocks = safeLoadJSON(localStorage, 'unlockedSkins', null, handleCorruptStorage);
+      if (Array.isArray(savedUnlocks) && savedUnlocks.length) {
+        unlockedSkins = new Set(savedUnlocks);
+      }
+      let adsRemoved = safeLoadJSON(localStorage, 'adsRemoved', false) === true;
       let continueUsed = false;
+      let score = 0;
+      let gameStarted = false;
+      let gameRunning = false;
+      let lastPipeTime = 0;
+      let paused = false;
+      let countdownActive = false;
+      let resumeCountdownActive = false;
+      const gameStateMachine = createStateMachine(GAME_STATES.BOOT);
+      let gameState = gameStateMachine.getState();
+      let previousGameState = GAME_STATES.MENU;
+      let lastFrameTime = performance.now();
+      let userSettings = loadSettings(localStorage, undefined, handleCorruptStorage);
 
       function saveCoins() {
         try { localStorage.setItem('dragonCoins', coins.toString()); } catch (e) {}
@@ -894,17 +918,21 @@
         }
       }
 
+      function canTransitionState(fromState, toState) {
+        return gameStateMachine.canTransition(fromState, toState);
+      }
+
+      function setGameState(nextState, force = false) {
+        if (!gameStateMachine.transition(nextState, force)) return false;
+        previousGameState = gameState;
+        gameState = gameStateMachine.getState();
+        return true;
+      }
+
       updateCoinDisplay();
       updateSkinButtons();
       updateAdBanner();
-  
-      let score = 0;
-      let gameStarted = false;
-      let gameRunning = false;
-      let lastPipeTime = 0;
-      let paused = false;
-      let countdownActive = false;
-      let lastFrameTime = performance.now();
+      setGameState(GAME_STATES.MENU, true);
 
       // --- Feature 1: Screen Shake ---
       let shakeTimer = 0;
@@ -953,16 +981,25 @@
       let showFPS = false;
       let fpsValue = 0;
       const fpsCounter = document.getElementById('fps-counter');
+      muted = !!userSettings.muted;
+      showFPS = !!userSettings.showFPS;
+      muteButton.innerText = muted ? '🔇' : '🔊';
+      fpsCounter.style.display = showFPS ? 'block' : 'none';
+
+      function persistSettings(partial) {
+        userSettings = { ...userSettings, ...partial };
+        saveSettings(localStorage, userSettings);
+      }
 
       // --- Feature 15: Stats Tracking ---
       let statsData = { totalGames: 0, totalScore: 0, bestStreak: 0 };
-      try {
-        const saved = localStorage.getItem('dragonStats');
-        if (saved) statsData = Object.assign(statsData, JSON.parse(saved));
-      } catch (e) { /* storage unavailable */ }
+      const savedStats = safeLoadJSON(localStorage, 'dragonStats', null, handleCorruptStorage);
+      if (savedStats && typeof savedStats === 'object') {
+        statsData = Object.assign(statsData, savedStats);
+      }
 
       function saveStats() {
-        try { localStorage.setItem('dragonStats', JSON.stringify(statsData)); } catch (e) {}
+        safeSetJSON(localStorage, 'dragonStats', statsData);
       }
 
       const particles = [];
@@ -1088,14 +1125,12 @@
         velocity: 0,
         draw(ghost) {
           const skin = ghost ? { body: 'rgba(200,220,255,0.35)', wing: 'rgba(180,200,255,0.25)', head: 'rgba(200,220,255,0.35)', snout: 'rgba(180,200,255,0.25)', eye: 'rgba(255,255,255,0.4)' } : skins[selectedSkin];
-          // --- Feature 2: velocity-based wing angle ---
-          const wingAngle = Math.max(-0.5, Math.min(0.5, this.velocity * 0.05));
-          const wingSin = Math.sin(wingTimer * 0.15) * 0.3;
-          const wUp = wingAngle - wingSin;   // upper wing offset
-          const wDn = wingAngle + wingSin;   // lower wing offset
+          const wingOffsets = computeWingOffsets(this.velocity, wingTimer);
+          const wUp = wingOffsets.upper;
+          const wDn = wingOffsets.lower;
 
           // --- Feature 17: Bird tilt/rotation based on velocity ---
-          const tiltAngle = Math.max(-0.4, Math.min(0.7, this.velocity * 0.06));
+          const tiltAngle = computeTiltAngle(this.velocity);
 
           ctx.save();
           ctx.translate(this.x, this.y);
@@ -1184,14 +1219,6 @@
       };
       birdInitialized = true;
   
-      // --- Feature 11: Pipe color based on score ---
-      function getPipeColor(currentScore) {
-        if (currentScore >= 50) return { body: '#C0392B', cap: '#962d22' };
-        if (currentScore >= 25) return { body: '#8E44AD', cap: '#6c3483' };
-        if (currentScore >= 10) return { body: '#2980B9', cap: '#1a6391' };
-        return { body: '#75B91A', cap: '#5A9117' };
-      }
-
       function Pipe(x) {
         this.x = x;
         this.width = basePipeWidth;
@@ -1208,30 +1235,11 @@
           let bodyColor = colors.body;
           let capColor = colors.cap;
           if (distToPipe < warnThreshold && gameRunning) {
-            const warnRatio = 1 - distToPipe / warnThreshold;
-            const flash = Math.sin(Date.now() * 0.015) * 0.5 + 0.5;
-            const warnAlpha = warnRatio * flash * 0.5;
-            ctx.save();
-            ctx.fillStyle = colors.body;
-            ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
-            ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
-            ctx.fillStyle = colors.cap;
-            ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
-            ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
-            ctx.globalAlpha = warnAlpha;
-            ctx.fillStyle = '#FF4500';
-            ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
-            ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
-            ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
-            ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
-            ctx.restore();
+            const warnAlpha = computeWarningAlpha(distToPipe, warnThreshold, Date.now());
+            drawPipePair(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, canvas.height, colors.body, colors.cap);
+            drawPipeWarningOverlay(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, canvas.height, warnAlpha);
           } else {
-            ctx.fillStyle = bodyColor;
-            ctx.fillRect(this.x, 0, this.width, this.gapY - pipeGap / 2);
-            ctx.fillRect(this.x, this.gapY + pipeGap / 2, this.width, canvas.height - (this.gapY + pipeGap / 2) - GROUND_HEIGHT);
-            ctx.fillStyle = capColor;
-            ctx.fillRect(this.x - 5, this.gapY - pipeGap / 2 - 20, this.width + 10, 20);
-            ctx.fillRect(this.x - 5, this.gapY + pipeGap / 2, this.width + 10, 20);
+            drawPipePair(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, canvas.height, bodyColor, capColor);
           }
           // --- Feature 25: Pipe gap center marker ---
           ctx.save();
@@ -1258,20 +1266,13 @@
             lastScoreTime = now;
 
             // Determine multiplier
-            let multiplier = 1;
-            if (comboCount >= 5) multiplier = 3;
-            else if (comboCount >= 3) multiplier = 2;
+            const multiplier = getComboMultiplier(comboCount);
 
             score += multiplier;
             scoreDisplay.innerText = score;
 
             // Update combo display
-            if (comboCount >= 3) {
-              comboDisplay.innerText = `Combo x${multiplier}! (${comboCount})`;
-              comboDisplay.style.opacity = '1';
-            } else {
-              comboDisplay.innerText = '';
-            }
+            renderComboText(comboDisplay, comboCount, multiplier);
 
             // --- Feature 6: Floating score popup ---
             scorePopups.push({
@@ -1285,10 +1286,9 @@
             // --- Feature 3: Progressive difficulty scaling ---
             if (score % 10 === 0) {
               const basePipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
-              const maxPipeSpeed = basePipeSpeed + 3;
-              pipeSpeed = Math.min(pipeSpeed + 0.15, maxPipeSpeed);
-              const minGap = 80;
-              pipeGap = Math.max(pipeGap - 2, minGap);
+              const scaled = computeProgressiveDifficulty(score, basePipeSpeed, basePipeGap);
+              pipeSpeed = scaled.pipeSpeed;
+              pipeGap = scaled.pipeGap;
             }
 
             // --- Feature 8: Dragon fire breathing ---
@@ -1324,30 +1324,19 @@
       function drawBackground() {
         const dayColor = { r: 113, g:197, b:207 };
         const nightColor = { r:0, g:31, b:63 };
-        const t = (Math.sin(Date.now() / DAY_NIGHT_CYCLE_SPEED) + 1) / 2;
-        const r = Math.floor(dayColor.r * t + nightColor.r * (1-t));
-        const g = Math.floor(dayColor.g * t + nightColor.g * (1-t));
-        const b = Math.floor(dayColor.b * t + nightColor.b * (1-t));
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        const nowMs = Date.now();
+        const t = getDayNightBlend(nowMs, DAY_NIGHT_CYCLE_SPEED);
+        ctx.fillStyle = getSkyColor(t, dayColor, nightColor);
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // --- Feature 9: Twinkling stars at night ---
-        if (t < 0.5) {
-          const starAlpha = Math.max(0, 1 - t * 2);
-          stars.forEach(star => {
-            const twinkle = (Math.sin(Date.now() * 0.001 * star.speed + star.phase) + 1) / 2;
-            ctx.fillStyle = `rgba(255,255,255,${starAlpha * (0.4 + twinkle * 0.6)})`;
-            ctx.beginPath();
-            ctx.arc(star.x * canvas.width, star.y * canvas.height, star.radius, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        }
+        drawTwinklingStars(ctx, stars, canvas.width, canvas.height, t, nowMs);
 
         // --- Feature 21: Sun and Moon celestial body ---
         const celestialX = canvas.width * 0.85;
         if (t >= 0.5) {
           // Sun (daytime)
-          const sunAlpha = Math.min(1, (t - 0.5) * 4);
+          const sunAlpha = getCelestialAlpha(t, 'sun');
           ctx.save();
           ctx.globalAlpha = sunAlpha;
           ctx.fillStyle = '#FFD700';
@@ -1361,7 +1350,7 @@
           ctx.restore();
         } else {
           // Moon (nighttime)
-          const moonAlpha = Math.min(1, (0.5 - t) * 4);
+          const moonAlpha = getCelestialAlpha(t, 'moon');
           ctx.save();
           ctx.globalAlpha = moonAlpha;
           ctx.fillStyle = '#FFFDE7';
@@ -1379,44 +1368,11 @@
           ctx.restore();
         }
 
-        // --- Feature 7: Parallax — distant mountains ---
-        if (gameRunning) parallaxOffset1 = (parallaxOffset1 + 0.3) % canvas.width;
-        const mtnY = canvas.height - GROUND_HEIGHT - 120;
-        ctx.fillStyle = `rgba(100,140,100,${0.3 + t * 0.3})`;
-        for (let i = -1; i <= 2; i++) {
-          const bx = (i * canvas.width - parallaxOffset1 + canvas.width) % (canvas.width * 2) - canvas.width * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(bx, canvas.height - GROUND_HEIGHT);
-          ctx.lineTo(bx + canvas.width * 0.25, mtnY);
-          ctx.lineTo(bx + canvas.width * 0.5, canvas.height - GROUND_HEIGHT);
-          ctx.fill();
-        }
-
-        // --- Feature 7: Parallax — mid-ground bushes ---
-        if (gameRunning) parallaxOffset2 = (parallaxOffset2 + 0.8) % 200;
-        ctx.fillStyle = `rgba(60,120,60,${0.5 + t * 0.3})`;
-        for (let bx = -parallaxOffset2; bx < canvas.width + 200; bx += 200) {
-          ctx.beginPath();
-          ctx.arc(bx + 30, canvas.height - GROUND_HEIGHT, 25, Math.PI, 0);
-          ctx.arc(bx + 55, canvas.height - GROUND_HEIGHT, 35, Math.PI, 0);
-          ctx.arc(bx + 80, canvas.height - GROUND_HEIGHT, 25, Math.PI, 0);
-          ctx.fill();
-        }
-
-        // Clouds
-        clouds.forEach(cloud => {
-          cloud.x -= cloud.speed;
-          if (cloud.x < -150) {
-            cloud.x = canvas.width + 50;
-            cloud.y = Math.random() * canvas.height * 0.5;
-          }
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-          ctx.beginPath();
-          ctx.arc(cloud.x, cloud.y, 40 * cloud.size, 0, Math.PI * 2);
-          ctx.arc(cloud.x + 30, cloud.y - 10, 30 * cloud.size, 0, Math.PI * 2);
-          ctx.arc(cloud.x + 60, cloud.y, 40 * cloud.size, 0, Math.PI * 2);
-          ctx.fill();
-        });
+        const nextOffsets = updateParallaxOffsets(gameRunning, parallaxOffset1, parallaxOffset2, canvas.width);
+        parallaxOffset1 = nextOffsets.parallaxOffset1;
+        parallaxOffset2 = nextOffsets.parallaxOffset2;
+        drawParallaxLayers(ctx, canvas.width, canvas.height, GROUND_HEIGHT, t, parallaxOffset1, parallaxOffset2);
+        updateAndDrawClouds(ctx, clouds, canvas.width, canvas.height);
       }
 
       // --- Feature 12: Animated ground with grass blades ---
@@ -1424,51 +1380,15 @@
       let grassTimer = 0;
       function drawGround() {
         grassTimer += 0.03;
-        if (gameRunning) groundOffset = (groundOffset + pipeSpeed * 0.6) % 36;
-        ctx.fillStyle = '#DED895';
-        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
-        ctx.fillStyle = '#755C48';
-        ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, 20);
-        // Scrolling dirt stripe
-        ctx.fillStyle = 'rgba(100,70,40,0.25)';
-        for (let dx = -groundOffset; dx < canvas.width + 36; dx += 36) {
-          ctx.fillRect(dx, canvas.height - GROUND_HEIGHT, 18, 6);
-        }
-        // Grass blades
-        const bladeSpacing = 18;
-        const groundTop = canvas.height - GROUND_HEIGHT;
-        for (let gx = 0; gx < canvas.width; gx += bladeSpacing) {
-          const sway = Math.sin(grassTimer + gx * 0.1) * 4;
-          const h = 10 + Math.sin(gx * 0.3) * 3;
-          ctx.fillStyle = '#4a9e2f';
-          ctx.beginPath();
-          ctx.moveTo(gx - 3, groundTop);
-          ctx.lineTo(gx + sway, groundTop - h);
-          ctx.lineTo(gx + 3, groundTop);
-          ctx.closePath();
-          ctx.fill();
-        }
+        groundOffset = computeGroundOffset(groundOffset, gameRunning, pipeSpeed);
+        drawGroundAndGrass(ctx, canvas.width, canvas.height, GROUND_HEIGHT, groundOffset, grassTimer);
       }
 
       // --- Feature 16: Bird Ground Shadow (projected onto ground) ---
       function drawBirdGroundShadow() {
         const groundY = canvas.height - GROUND_HEIGHT;
-        // Visual y of bird = game y + cameraOffsetY (bird drawn inside camera transform)
         const visualBirdY = bird.y + cameraOffsetY;
-        const distanceFromGround = Math.max(0, groundY - visualBirdY);
-        const maxDist = groundY * 0.75;
-        const ratio = Math.min(1, distanceFromGround / maxDist);
-        const shadowW = 28 * (1 - ratio * 0.65);
-        const shadowH = 7 * (1 - ratio * 0.65);
-        const shadowAlpha = 0.45 * (1 - ratio * 0.82);
-        if (shadowAlpha <= 0.01) return;
-        ctx.save();
-        ctx.globalAlpha = shadowAlpha;
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(bird.x, groundY - 4, shadowW, shadowH, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        renderBirdGroundShadow(ctx, bird.x, visualBirdY, groundY);
       }
   
       let clouds = [
@@ -1610,8 +1530,8 @@
 
         // --- Feature 14: FPS ---
         if (elapsed > 0) {
-          fpsValue = Math.round(1000 / elapsed);
-          if (showFPS) fpsCounter.innerText = `FPS: ${fpsValue}`;
+          fpsValue = calculateFPS(elapsed);
+          renderFPS(fpsCounter, showFPS, fpsValue);
         }
 
         // --- Feature 2: Wing timer ---
@@ -1687,20 +1607,12 @@
       }
   
       function getLeaderboard() {
-        try {
-          const board = localStorage.getItem('leaderboard');
-          return board ? JSON.parse(board) : [];
-        } catch (e) {
-          return [];
-        }
+        const board = safeLoadJSON(localStorage, 'leaderboard', [], handleCorruptStorage);
+        return Array.isArray(board) ? board : [];
       }
   
       function setLeaderboard(board) {
-        try {
-          localStorage.setItem('leaderboard', JSON.stringify(board));
-        } catch (e) {
-          // Storage unavailable
-        }
+        safeSetJSON(localStorage, 'leaderboard', board);
       }
   
       function updateLeaderboardDisplay() {
@@ -1765,7 +1677,9 @@
   
       function startCountdown() {
         if (countdownActive) return;
+        setGameState(GAME_STATES.COUNTDOWN);
         countdownActive = true;
+        resumeCountdownActive = false;
         gameOverMessage.style.display = 'none';
         nameInputModal.classList.remove('visible');
         document.getElementById('difficulty-selection').style.display = 'none';
@@ -1786,9 +1700,11 @@
       }
   
       function startGame() {
+        setGameState(GAME_STATES.RUNNING);
         gameStarted = true;
         gameRunning = true;
         countdownActive = false;
+        paused = false;
         score = 0;
         scoreDisplay.innerText = score;
         startMessage.style.display = 'none';
@@ -1811,25 +1727,13 @@
         lastPipeTime = Date.now();
         lastFrameTime = performance.now();
         continueUsed = false;
+        pauseButton.innerText = 'Pause';
       }
   
-      // --- Feature 13: Medal system ---
-      function getMedal(s) {
-        if (s >= 100) return { label: 'Platinum', color: '#E5E4E2', glow: '#fff' };
-        if (s >= 50)  return { label: 'Gold',     color: '#FFD700', glow: '#ffa500' };
-        if (s >= 25)  return { label: 'Silver',   color: '#C0C0C0', glow: '#aaa' };
-        if (s >= 10)  return { label: 'Bronze',   color: '#CD7F32', glow: '#8B4513' };
-        return null;
-      }
-
       function updateHighScore() {
         if (score > highScore) {
           highScore = score;
-          try {
-            localStorage.setItem('highScore', highScore);
-          } catch (e) {
-            // Storage unavailable
-          }
+          try { localStorage.setItem('highScore', String(highScore)); } catch (e) {}
           finalScore.innerText = `Score: ${score} (New High Score!)`;
           highScoreDisplay.innerText = `High Score: ${highScore}`;
         } else {
@@ -1840,7 +1744,10 @@
 
       function gameOver() {
         if (!gameRunning) return;
+        setGameState(GAME_STATES.GAME_OVER);
         gameRunning = false;
+        paused = false;
+        resumeCountdownActive = false;
 
         // --- Feature 1: Trigger screen shake ---
         shakeTimer = SHAKE_DURATION;
@@ -1909,6 +1816,45 @@
         // --- Feature 24: Celebrate new high score with confetti ---
         if (isNewHighScore && score > 0) spawnConfetti();
       }
+
+      function pauseGame() {
+        if (!gameRunning || paused) return;
+        paused = true;
+        resumeCountdownActive = false;
+        setGameState(GAME_STATES.PAUSED);
+        pauseButton.innerText = 'Resume';
+      }
+
+      function resumeGameWithCountdown() {
+        if (!paused || resumeCountdownActive) return;
+        resumeCountdownActive = true;
+        setGameState(GAME_STATES.COUNTDOWN);
+        let countdown = COUNTDOWN_SECONDS;
+        startMessage.style.display = 'block';
+        startMessage.innerText = countdown;
+        const countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdown > 0) {
+            startMessage.innerText = countdown;
+            return;
+          }
+          clearInterval(countdownInterval);
+          startMessage.style.display = 'none';
+          paused = false;
+          resumeCountdownActive = false;
+          setGameState(GAME_STATES.RUNNING);
+          pauseButton.innerText = 'Pause';
+        }, 1000);
+      }
+
+      function togglePauseResume() {
+        if (!gameRunning) return;
+        if (paused) {
+          resumeGameWithCountdown();
+        } else {
+          pauseGame();
+        }
+      }
   
       canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
@@ -1934,6 +1880,7 @@
         if (continueUsed || coins < CONTINUE_COST) return;
         if (!spendCoins(CONTINUE_COST)) return;
         continueUsed = true;
+        setGameState(GAME_STATES.RUNNING);
         gameOverMessage.style.display = 'none';
         nameInputModal.classList.remove('visible');
         document.getElementById('bottom-controls').style.display = 'none';
@@ -1941,6 +1888,7 @@
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('skin-selection').style.display = 'none';
         gameRunning = true;
+        paused = false;
         bird.y = canvas.height / 2;
         bird.velocity = 0;
         pipes.length = 0;
@@ -1959,12 +1907,16 @@
 
       // --- Monetization: Coin shop ---
       shopButton.addEventListener('click', () => {
+        setGameState(GAME_STATES.SHOP);
         updateCoinDisplay();
         updateShopButtons();
         coinShopModal.classList.add('visible');
       });
 
       document.getElementById('shop-close-btn').addEventListener('click', () => {
+        const fallbackState = gameRunning ? GAME_STATES.RUNNING : (gameStarted ? GAME_STATES.GAME_OVER : GAME_STATES.MENU);
+        const restoreState = canTransitionState(gameState, previousGameState) ? previousGameState : fallbackState;
+        setGameState(restoreState, true);
         coinShopModal.classList.remove('visible');
       });
 
@@ -2019,21 +1971,19 @@
       removeAdsBtn.addEventListener('click', () => {
         if (spendCoins(REMOVE_ADS_COST)) {
           adsRemoved = true;
-          try { localStorage.setItem('adsRemoved', 'true'); } catch (e) {}
+          safeSetJSON(localStorage, 'adsRemoved', true);
           updateAdBanner();
         }
       });
   
       pauseButton.addEventListener('click', () => {
-        paused = !paused;
-        pauseButton.innerText = paused ? 'Resume' : 'Pause';
+        togglePauseResume();
       });
   
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
           e.preventDefault();
-          paused = !paused;
-          pauseButton.innerText = paused ? 'Resume' : 'Pause';
+          togglePauseResume();
         }
         if (e.code === 'ArrowUp' || e.code === 'KeyW') {
           e.preventDefault();
@@ -2046,17 +1996,20 @@
         if (e.code === 'KeyM') {
           muted = !muted;
           muteButton.innerText = muted ? '🔇' : '🔊';
+          persistSettings({ muted });
         }
         // --- Feature 14: FPS toggle ---
         if (e.code === 'KeyF') {
           showFPS = !showFPS;
           fpsCounter.style.display = showFPS ? 'block' : 'none';
+          persistSettings({ showFPS });
         }
       });
 
       muteButton.addEventListener('click', () => {
         muted = !muted;
         muteButton.innerText = muted ? '🔇' : '🔊';
+        persistSettings({ muted });
       });
   
       function setupButtonGroup(buttons, callback) {
