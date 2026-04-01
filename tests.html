@@ -24,6 +24,17 @@
 <p>Tests for all 25 key improvements (Features 1–25). Open in a browser to run.</p>
 <div id="results"></div>
 
+<script src="src/core/rules.js"></script>
+<script src="src/core/stateMachine.js"></script>
+<script src="src/core/storage.js"></script>
+<script src="src/core/loop.js"></script>
+<script src="src/core/input.js"></script>
+<script src="src/render/background.js"></script>
+<script src="src/render/pipes.js"></script>
+<script src="src/render/bird.js"></script>
+<script src="src/render/hud.js"></script>
+<script src="src/render/ground.js"></script>
+<script src="src/render/effects.js"></script>
 <script>
 // ─── Minimal Test Framework ────────────────────────────────────────────────
 const tests = [];
@@ -64,45 +75,16 @@ function assertApprox(a, b, tol, message) {
   if (Math.abs(a - b) > tol) throw new Error(message || `Expected ~${b}, got ${a}`);
 }
 
-// ─── Helpers mirroring the game logic ──────────────────────────────────────
+// ─── Shared game rules imported from runtime code ──────────────────────────
 
-// Feature 3: Progressive difficulty
-function computeProgressiveDifficulty(score, basePipeSpeed, basePipeGap) {
-  let pipeSpeed = basePipeSpeed;
-  let pipeGap = basePipeGap;
-  const maxPipeSpeed = basePipeSpeed + 3;
-  const minGap = 80;
-  const ticks = Math.floor(score / 10);
-  for (let i = 0; i < ticks; i++) {
-    pipeSpeed = Math.min(pipeSpeed + 0.15, maxPipeSpeed);
-    pipeGap = Math.max(pipeGap - 2, minGap);
-  }
-  return { pipeSpeed, pipeGap };
-}
-
-// Feature 4: Combo multiplier
-function getComboMultiplier(comboCount) {
-  if (comboCount >= 5) return 3;
-  if (comboCount >= 3) return 2;
-  return 1;
-}
-
-// Feature 11: Pipe color selection
-function getPipeColor(score) {
-  if (score >= 50) return { body: '#C0392B', cap: '#962d22' };
-  if (score >= 25) return { body: '#8E44AD', cap: '#6c3483' };
-  if (score >= 10) return { body: '#2980B9', cap: '#1a6391' };
-  return { body: '#75B91A', cap: '#5A9117' };
-}
-
-// Feature 13: Medal system
-function getMedal(s) {
-  if (s >= 100) return { label: 'Platinum', color: '#E5E4E2' };
-  if (s >= 50)  return { label: 'Gold',     color: '#FFD700' };
-  if (s >= 25)  return { label: 'Silver',   color: '#C0C0C0' };
-  if (s >= 10)  return { label: 'Bronze',   color: '#CD7F32' };
-  return null;
-}
+const {
+  computeProgressiveDifficulty,
+  getComboMultiplier,
+  getPipeColor,
+  getMedal
+} = window.DragonRules;
+const { normalizeDelta, computeShakeOffset, updateCameraOffset } = window.DragonLoop;
+const { shouldStartGame, shouldFlap, toggleBoolean, normalizeJumpKey } = window.DragonInput;
 
 // Feature 14: FPS calculation
 function calcFPS(elapsed) {
@@ -129,6 +111,19 @@ function getShakeOffset(shakeTimer, shakeDuration, shakeIntensity) {
   return { intensity, bounded: intensity <= shakeIntensity };
 }
 
+// Update 13/14: Game state transitions
+const { GAME_STATES: TEST_GAME_STATES, createStateMachine } = window.DragonStateMachine;
+const { loadSettings, saveSettings, safeLoadJSON } = window.DragonStorage;
+const { getDayNightBlend, getSkyColor, getCelestialAlpha, updateParallaxOffsets } = window.DragonRenderBackground;
+const { computeWarningAlpha } = window.DragonRenderPipes;
+const { calculateFPS } = window.DragonRenderHUD;
+const { computeGroundOffset } = window.DragonRenderGround;
+const { updateScorePopups: updateScorePopupItems } = window.DragonRenderEffects;
+function canTransitionState(fromState, toState) {
+  const machine = createStateMachine(fromState);
+  return machine.canTransition(fromState, toState);
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
 describe('Feature 1: Screen Shake', () => {
@@ -149,6 +144,104 @@ describe('Feature 1: Screen Shake', () => {
   it('shake is fully decayed at timer==0', () => {
     const r = getShakeOffset(0, 300, 8);
     assertEqual(r.x, 0);
+  });
+});
+
+describe('Update 13/14: Game State Machine', () => {
+  it('boot can transition to menu', () => {
+    assert(canTransitionState(TEST_GAME_STATES.BOOT, TEST_GAME_STATES.MENU));
+  });
+  it('menu can transition to countdown and shop', () => {
+    assert(canTransitionState(TEST_GAME_STATES.MENU, TEST_GAME_STATES.COUNTDOWN));
+    assert(canTransitionState(TEST_GAME_STATES.MENU, TEST_GAME_STATES.SHOP));
+  });
+  it('running can transition to paused and gameover', () => {
+    assert(canTransitionState(TEST_GAME_STATES.RUNNING, TEST_GAME_STATES.PAUSED));
+    assert(canTransitionState(TEST_GAME_STATES.RUNNING, TEST_GAME_STATES.GAME_OVER));
+  });
+  it('paused can transition back to running', () => {
+    assert(canTransitionState(TEST_GAME_STATES.PAUSED, TEST_GAME_STATES.RUNNING));
+  });
+  it('invalid transition is rejected (boot -> running)', () => {
+    assertEqual(canTransitionState(TEST_GAME_STATES.BOOT, TEST_GAME_STATES.RUNNING), false);
+  });
+});
+
+describe('Update 9/10: Settings + storage recovery', () => {
+  it('loads default settings when storage key is missing', () => {
+    const fakeStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+    const settings = loadSettings(fakeStorage);
+    assertEqual(settings.muted, false);
+    assertEqual(settings.showFPS, false);
+  });
+  it('saves and reloads settings', () => {
+    const store = {};
+    const fakeStorage = {
+      getItem: (k) => store[k] || null,
+      setItem: (k, v) => { store[k] = v; },
+      removeItem: (k) => { delete store[k]; }
+    };
+    saveSettings(fakeStorage, { muted: true, showFPS: true });
+    const loaded = loadSettings(fakeStorage);
+    assertEqual(loaded.muted, true);
+    assertEqual(loaded.showFPS, true);
+  });
+  it('uses fallback when JSON is corrupted', () => {
+    const fakeStorage = { getItem: () => '{bad json' };
+    const loaded = safeLoadJSON(fakeStorage, 'broken', { ok: true }, () => {});
+    assertEqual(loaded.ok, true);
+  });
+});
+
+describe('Update 8/9: Render helper math extraction', () => {
+  it('day-night blend stays in range [0,1]', () => {
+    const blend = getDayNightBlend(5000, 5000);
+    assert(blend >= 0 && blend <= 1);
+  });
+  it('sky color formatter returns rgb string', () => {
+    const c = getSkyColor(1, { r: 10, g: 20, b: 30 }, { r: 0, g: 0, b: 0 });
+    assert(c.includes('rgb(10, 20, 30)'));
+  });
+  it('warning alpha is zero outside threshold', () => {
+    assertEqual(computeWarningAlpha(200, 120, 1000), 0);
+  });
+  it('fps calculator handles zero elapsed', () => {
+    assertEqual(calculateFPS(0), 0);
+  });
+  it('celestial alpha is positive in active ranges', () => {
+    assert(getCelestialAlpha(0.75, 'sun') > 0);
+    assert(getCelestialAlpha(0.25, 'moon') > 0);
+  });
+  it('ground offset only advances while running', () => {
+    const still = computeGroundOffset(10, false, 3);
+    const moving = computeGroundOffset(10, true, 3);
+    assertEqual(still, 10);
+    assert(moving > 10);
+  });
+  it('parallax offsets update only when running', () => {
+    const still = updateParallaxOffsets(false, 5, 15, 800);
+    const moving = updateParallaxOffsets(true, 5, 15, 800);
+    assertEqual(still.parallaxOffset1, 5);
+    assert(moving.parallaxOffset1 > 5);
+  });
+  it('score popup updater fades and removes expired items', () => {
+    const popups = [{ y: 0, vy: -1, alpha: 0.01 }];
+    updateScorePopupItems(popups, 1);
+    assertEqual(popups.length, 0);
+  });
+  it('loop helpers return safe values', () => {
+    assertEqual(normalizeDelta(16.67, 16.67, 3), 1);
+    const shake = computeShakeOffset(300, 8, 300, 16, () => 0.5);
+    assertEqual(shake.shakeX, 0);
+    assertEqual(shake.shakeY, 0);
+    const camera = updateCameraOffset(0, 200, 800, 1);
+    assert(Number.isFinite(camera));
+  });
+  it('input helpers evaluate control flow correctly', () => {
+    assertEqual(shouldStartGame(false, false), true);
+    assertEqual(shouldFlap(true, false), true);
+    assertEqual(toggleBoolean(true), false);
+    assertEqual(normalizeJumpKey('ArrowUp'), true);
   });
 });
 
