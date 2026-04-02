@@ -1,4 +1,6 @@
 const assert = require('assert');
+const fs = require('fs');
+const { execSync } = require('child_process');
 
 const {
   computeProgressiveDifficulty,
@@ -109,3 +111,22 @@ const { computeGroundOffset } = require('../src/render/ground.js');
 }
 
 console.log('All node tests passed.');
+
+// Merge hygiene check: fail fast if conflict markers slipped into tracked files.
+{
+  const trackedFiles = execSync('git ls-files', { encoding: 'utf8' })
+    .split('\n')
+    .map((file) => file.trim())
+    .filter(Boolean)
+    .filter((file) => /\.(html|js|md)$/.test(file));
+
+  trackedFiles.forEach((file) => {
+    const contents = fs.readFileSync(file, 'utf8');
+    const hasMergeMarkers = /^(<<<<<<<|=======|>>>>>>>)\s/m.test(contents);
+    assert.strictEqual(
+      hasMergeMarkers,
+      false,
+      `Merge conflict markers found in ${file}`
+    );
+  });
+}
