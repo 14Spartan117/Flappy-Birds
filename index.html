@@ -27,7 +27,7 @@
       top: calc(70px + var(--safe-top));
       width: 100%;
       text-align: center;
-      font-size: 24px;
+      font-size: clamp(16px, 4vw, 24px);
       font-weight: bold;
       color: #FFD700;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
@@ -92,7 +92,7 @@
       top: calc(20px + var(--safe-top));
       width: 100%;
       text-align: center;
-      font-size: 40px;
+      font-size: clamp(28px, 6vw, 40px);
       font-weight: bold;
       color: white;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -121,20 +121,22 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 28px;
+      font-size: clamp(18px, 5vw, 28px);
       font-weight: bold;
       color: white;
       background-color: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 10px;
       z-index: 20;
+      max-width: 90vw;
+      box-sizing: border-box;
     }
     #achievement-notification {
       position: absolute;
       top: 40%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 36px;
+      font-size: clamp(22px, 5vw, 36px);
       color: yellow;
       text-shadow: 2px 2px 4px #000;
       opacity: 0;
@@ -152,7 +154,7 @@
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 30px;
+      font-size: clamp(22px, 5vw, 30px);
       font-weight: bold;
       color: white;
       background-color: rgba(0,0,0,0.7);
@@ -160,20 +162,27 @@
       border-radius: 10px;
       display: none;
       z-index: 30;
+      max-height: 80vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      width: min(90vw, 380px);
+      box-sizing: border-box;
     }
     #game-over button {
       margin-top: 10px;
       padding: 10px 20px;
-      font-size: 20px;
+      font-size: clamp(16px, 4vw, 20px);
       background-color: #27ae60;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     #high-score {
       margin-top: 10px;
-      font-size: 20px;
+      font-size: clamp(16px, 3.5vw, 20px);
     }
     /* Pause button using our safe-area variables */
     #pause-button {
@@ -186,6 +195,13 @@
       border-radius: 5px;
       color: white;
       cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      touch-action: manipulation;
     }
     /* Bottom controls container – moved up */
     #bottom-controls {
@@ -203,11 +219,16 @@
       padding: 5px;
       background: rgba(0, 0, 0, 0.5);
       border-radius: 5px;
+      max-height: 40vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     /* Bottom selection groups – reduced text and button sizes */
     #mode-selection, #difficulty-selection, #skin-selection {
       text-align: center;
       color: white;
+      min-width: 0;
+      max-width: 100%;
     }
     #mode-selection h2,
     #difficulty-selection h2,
@@ -223,15 +244,27 @@
       justify-content: center;
       gap: 5px;
     }
+    /* Skin buttons scroll horizontally on narrow screens */
+    .skin-buttons {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      justify-content: flex-start;
+      padding-bottom: 4px;
+      max-width: 100%;
+    }
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
-      padding: 5px 10px;
+      padding: 8px 12px;
       font-size: 12px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       background-color: #ccc;
+      min-height: 44px;
+      white-space: nowrap;
+      touch-action: manipulation;
     }
     .mode-btn.selected,
     .difficulty-btn.selected,
@@ -250,6 +283,13 @@
       border-radius: 5px;
       color: white;
       cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      touch-action: manipulation;
     }
     /* 10. Hover/focus styles for buttons */
     .mode-btn:hover, .difficulty-btn:hover, .skin-btn:hover {
@@ -296,6 +336,8 @@
       border-radius: 10px;
       text-align: center;
       color: white;
+      width: min(90vw, 340px);
+      box-sizing: border-box;
     }
     #name-input-modal input {
       padding: 8px;
@@ -314,6 +356,8 @@
       border-radius: 5px;
       cursor: pointer;
       margin: 5px;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     #name-input-modal button:hover {
       filter: brightness(1.2);
@@ -400,8 +444,12 @@
       text-align: center;
       color: white;
       max-width: 340px;
-      width: 90%;
+      width: min(90vw, 340px);
       border: 2px solid #FFD700;
+      max-height: 85vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
     }
     #coin-shop-modal .shop-content h2 {
       color: #FFD700;
@@ -430,6 +478,8 @@
       padding: 6px 14px;
       font-size: 13px;
       cursor: pointer;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     .shop-item button:hover { filter: brightness(1.15); }
     .shop-item button:disabled {
@@ -446,6 +496,8 @@
       padding: 8px 24px;
       font-size: 15px;
       cursor: pointer;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     #shop-close-btn:hover { filter: brightness(1.15); }
     /* Coin shop open button */
@@ -467,12 +519,14 @@
     #continue-button {
       margin-top: 8px;
       padding: 10px 20px;
-      font-size: 18px;
+      font-size: clamp(14px, 3.5vw, 18px);
       background-color: #e67e22;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     #continue-button:hover { filter: brightness(1.15); background-color: #d35400; }
     #continue-button:disabled {
@@ -499,14 +553,75 @@
     #rewarded-ad-btn {
       margin-top: 6px;
       padding: 8px 16px;
-      font-size: 14px;
+      font-size: clamp(12px, 3vw, 14px);
       background-color: #8e44ad;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      min-height: 44px;
+      touch-action: manipulation;
     }
     #rewarded-ad-btn:hover { filter: brightness(1.15); }
+    /* ── Responsive: small screens ≤ 480px ── */
+    @media (max-width: 480px) {
+      #leaderboard {
+        max-width: 130px;
+        font-size: 11px;
+        padding: 6px 8px;
+      }
+      #start-high-score {
+        font-size: 16px;
+      }
+      #mode-selection h2,
+      #difficulty-selection h2,
+      #skin-selection h2 {
+        font-size: 12px;
+        margin-bottom: 2px;
+      }
+    }
+    /* ── Responsive: landscape phones (short viewport) ── */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #bottom-controls {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overflow-y: hidden;
+        max-height: none;
+        align-items: flex-start;
+        bottom: calc(55px + env(safe-area-inset-bottom, 0px));
+      }
+      #mode-selection h2,
+      #difficulty-selection h2,
+      #skin-selection h2 {
+        font-size: 11px;
+        margin-bottom: 1px;
+      }
+      .mode-btn,
+      .difficulty-btn,
+      .skin-btn {
+        font-size: 11px;
+        padding: 5px 8px;
+        /* Landscape phones have limited vertical space; 36px is an acceptable
+           tradeoff between space efficiency and touch accessibility here */
+        min-height: 36px;
+      }
+      #game-over {
+        top: 50%;
+        max-height: 90vh;
+        padding: 12px;
+        font-size: clamp(16px, 3vh, 22px);
+      }
+      #start-message {
+        font-size: clamp(14px, 3vh, 20px);
+        padding: 8px 12px;
+        top: 25%;
+      }
+      #score-display {
+        font-size: clamp(22px, 4vh, 32px);
+      }
+    }
   </style>
 </head>
 <body>
