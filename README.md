@@ -82,6 +82,54 @@ The test file covers all 15 new features including:
 - Ad removal system
 - Rewarded ad coin bonuses
 
+## 📱 Mobile UI Architecture
+
+Dragon Flight features a complete mobile-first UI redesign that delivers a polished, touch-optimized experience across all screen sizes.
+
+### Design System
+
+A CSS custom-property token system drives the entire UI (`--clr-*`, `--r-*`, `--sh-*`, `--dur-*`). All sizing uses `clamp()` for fluid scaling across screen widths. Safe-area insets (`env(safe-area-inset-*)`) are applied to every positioned HUD element so notched and rounded-corner phones display content correctly.
+
+### Screen Layouts
+
+| Screen | Description |
+|--------|-------------|
+| **Start Screen** | Floating glass card (backdrop-filter blur) centered at 32 % viewport height with animated dragon logo, pulsing CTA, and high-score. Slides in with a spring animation. |
+| **HUD** | Score (large, centered top) · Coin balance pill (top-left) · Mute + Pause pills (top-right) · Shop/Donate buttons below HUD row · Leaderboard glass card (left). All elements respect safe-area insets. |
+| **Pause Overlay** | Full-screen frosted overlay (toggled via `.visible` class) with pause icon and resume hint. Tapping the overlay resumes the game. |
+| **Game Over Card** | Fixed full-screen dimmed backdrop with a centered card (max-width 400 px). Contains medal, score, high-score, stats, coins earned, and three action rows: primary CTA (Play Again) + secondary row (Continue + Share) + rewarded ad. |
+| **Settings Panel** | Collapsible bottom-sheet (slides up with `panelSlideUp` animation) housing Mode, Difficulty, and Skin pickers. Collapses/expands via the ▼ toggle button or tapping the header drag-handle. Hidden during active gameplay. |
+| **Name Entry & Shop Modals** | Centered fixed modals with glass cards, large touch targets (≥ 46 px), and focus-visible keyboard outlines. |
+
+### Touch & Interaction
+
+- All tappable elements have `min-height: 42 px` (HUD buttons) or `min-height: 44–50 px` (modal/game-over actions).
+- `:active` states scale elements to 0.96 with a brightness flash for immediate tactile feedback.
+- `touch-action: manipulation` disables double-tap zoom on the canvas and all buttons.
+- `-webkit-tap-highlight-color: transparent` removes the default mobile tap flash.
+- The canvas uses `touch-action: none` for raw pointer input capture.
+
+### Architecture Notes
+
+- **Single file** (`index.html`) — no build tools or dependencies.
+- **Pause overlay** is a new `<div id="pause-overlay">` element toggled by the existing `paused` state. A small post-`DOMContentLoaded` listener wires it to the existing pause-button and Space key.
+- **Settings collapse** is handled by toggling a `collapsed` class on `#bottom-controls`; CSS hides `#settings-body` and rotates the ▼ icon.
+- The canvas is rendered at the bottom of the stacking context (`z-index: 0`) so all UI overlays sit on top without interfering with Canvas 2D rendering.
+- `100dvh` (dynamic viewport height) is used so the game fills the screen correctly on browsers where the URL bar hides/shows.
+
+### Testing on Mobile Viewports
+
+Open `index.html` via a local server (required for some browsers) and use DevTools device emulation:
+
+```bash
+# Start a local server (Python 3)
+python3 -m http.server 8080
+# Open http://localhost:8080 in Chrome, then toggle DevTools → Device Toolbar
+# Recommended test sizes: 390×844 (iPhone 14), 412×915 (Pixel 7), 375×667 (iPhone SE)
+```
+
+The game also works directly on physical devices via the GitHub Pages URL in a mobile browser.
+
 ## Running Locally
 
 No build tools or dependencies are required. Simply open `index.html` in any modern browser:
