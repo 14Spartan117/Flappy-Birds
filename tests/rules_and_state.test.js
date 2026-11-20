@@ -3,7 +3,12 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 
 const {
+  DIFFICULTY_STEP,
   computeProgressiveDifficulty,
+  crossedScoreStep,
+  fitGapToPlayArea,
+  getPipeGapRange,
+  settleRunScore,
   getComboMultiplier,
   getPipeColor,
   getMedal
@@ -35,6 +40,81 @@ const { computeGroundOffset } = require('../src/render/ground.js');
 
   assert.strictEqual(getMedal(9), null);
   assert.strictEqual(getMedal(100).label, 'Platinum');
+}
+
+// Difficulty steps: combo multipliers jump the score past exact multiples of 10
+{
+  assert.strictEqual(DIFFICULTY_STEP, 10);
+  assert(crossedScoreStep(9, 10));
+  assert(crossedScoreStep(9, 12), '9 -> 12 (x3 combo) still crosses 10');
+  assert(crossedScoreStep(27, 30));
+  assert(crossedScoreStep(28, 31));
+  assert(!crossedScoreStep(10, 12), 'no new step between 10 and 19');
+  assert(!crossedScoreStep(0, 9));
+  assert(!crossedScoreStep(12, 12));
+
+  // Scaling starts from the run's base values (Challenge mode passes its own)
+  const challenge = computeProgressiveDifficulty(12, 4.5, 160);
+  assert.strictEqual(challenge.pipeGap, 158);
+  assert(Math.abs(challenge.pipeSpeed - 4.65) < 1e-9);
+}
+
+// Pipe gap range: the whole gap stays on screen, with real variety on phones
+{
+  const sizes = [
+    [564, 200], // 664px-tall phone, Medium
+    [564, 250], // phone, Easy
+    [467, 200], // 567px-tall phone
+    [290, 200], // landscape phone: range must not invert
+    [290, 250],
+    [800, 150], // desktop, Hard
+    [1300, 200], // tall monitor
+    [120, 200] // gap taller than the play area
+  ];
+  sizes.forEach(([playHeight, gap]) => {
+    const { min, max } = getPipeGapRange(playHeight, gap);
+    assert(Number.isFinite(min) && Number.isFinite(max), `finite range for ${playHeight}/${gap}`);
+    assert(min <= max, `range not inverted for ${playHeight}/${gap}`);
+    if (playHeight >= gap) {
+      assert(min - gap / 2 >= 0, `gap top on screen for ${playHeight}/${gap}`);
+      assert(max + gap / 2 <= playHeight, `gap bottom above ground for ${playHeight}/${gap}`);
+    }
+  });
+
+  const phone = getPipeGapRange(564, 200);
+  assert(phone.max - phone.min >= 200, `phone spread ${phone.max - phone.min}px`);
+
+  const tall = getPipeGapRange(1300, 200);
+  assert(tall.max - tall.min <= 250, 'spread capped so consecutive gaps stay reachable');
+  assert.strictEqual((tall.min + tall.max) / 2, 650, 'capped range stays centred');
+
+  const tiny = getPipeGapRange(120, 200);
+  assert.strictEqual(tiny.min, tiny.max);
+}
+
+// Gap fitting: only very short play areas (phones in landscape) shrink the gap
+{
+  assert.strictEqual(fitGapToPlayArea(250, 564), 250, 'portrait phone keeps Easy');
+  assert.strictEqual(fitGapToPlayArea(200, 800), 200, 'desktop keeps Medium');
+  assert.strictEqual(fitGapToPlayArea(150, 242), 150, 'never makes a gap larger');
+  const landscapeEasy = fitGapToPlayArea(250, 242); // 342px-tall landscape phone
+  assert.strictEqual(landscapeEasy, 162);
+  assert(242 - landscapeEasy >= 80, 'at least 40px of pipe above and below');
+  assert.strictEqual(fitGapToPlayArea(250, 150), 160, 'never below a flyable gap');
+  const range = getPipeGapRange(242, landscapeEasy);
+  assert(range.max > range.min, 'fitted gap still varies in height');
+}
+
+// Run settlement: Continue keeps the score, so each point is paid out once
+{
+  const firstDeath = settleRunScore(3, 0, 1);
+  assert.deepStrictEqual(firstDeath, { newPoints: 3, coinsEarned: 3, settledScore: 3 });
+  const secondDeath = settleRunScore(6, firstDeath.settledScore, 1);
+  assert.deepStrictEqual(secondDeath, { newPoints: 3, coinsEarned: 3, settledScore: 6 });
+  assert.strictEqual(firstDeath.coinsEarned + secondDeath.coinsEarned, 6, 'a 6-point run pays 6 coins');
+  assert.deepStrictEqual(settleRunScore(0, 0, 1), { newPoints: 0, coinsEarned: 0, settledScore: 0 });
+  assert.strictEqual(settleRunScore(5, 6, 1).newPoints, 0, 'never negative');
+  assert.strictEqual(settleRunScore(10, 4, 2).coinsEarned, 12);
 }
 
 // State machine checks

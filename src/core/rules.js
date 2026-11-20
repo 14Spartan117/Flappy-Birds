@@ -1,12 +1,15 @@
 (function(global) {
   'use strict';
 
+  // Score interval at which progressive difficulty steps up.
+  const DIFFICULTY_STEP = 10;
+
   function computeProgressiveDifficulty(score, basePipeSpeed, basePipeGap) {
     let pipeSpeed = basePipeSpeed;
     let pipeGap = basePipeGap;
     const maxPipeSpeed = basePipeSpeed + 3;
     const minGap = 80;
-    const ticks = Math.floor(score / 10);
+    const ticks = Math.floor(score / DIFFICULTY_STEP);
 
     for (let i = 0; i < ticks; i++) {
       pipeSpeed = Math.min(pipeSpeed + 0.15, maxPipeSpeed);
@@ -14,6 +17,52 @@
     }
 
     return { pipeSpeed, pipeGap };
+  }
+
+  // True when a score change passes a multiple of `step`. Combo multipliers add
+  // 2-3 points at a time (9 -> 12), so `score % step === 0` would skip steps.
+  function crossedScoreStep(previousScore, newScore, step = DIFFICULTY_STEP) {
+    return Math.floor(newScore / step) > Math.floor(previousScore / step);
+  }
+
+  // On very short play areas (phones in landscape) a difficulty's gap can be as tall
+  // as the whole sky, so no pipe would be visible. Shrink the gap until at least
+  // `minVisiblePipe` of pipe shows above and below it, but never below `minGap`
+  // (still flyable with the dragon's 95px flap). Gaps are never made larger.
+  function fitGapToPlayArea(pipeGap, playHeight, { minVisiblePipe = 40, minGap = 160 } = {}) {
+    return Math.min(pipeGap, Math.max(minGap, playHeight - 2 * minVisiblePipe));
+  }
+
+  // Range for a pipe gap's centre inside the play area (the sky above the ground).
+  // The whole gap plus `edgeMargin` of pipe stays on screen; on short screens the
+  // margin shrinks instead of the range inverting, and on tall screens the spread
+  // is capped at `maxSpan` so consecutive gaps stay reachable.
+  function getPipeGapRange(playHeight, pipeGap, { edgeMargin = 60, maxSpan = 250 } = {}) {
+    const spare = Math.max(0, playHeight - pipeGap);
+    const margin = Math.min(edgeMargin, spare / 4);
+    let min = margin + pipeGap / 2;
+    let max = playHeight - margin - pipeGap / 2;
+    if (max <= min) {
+      const mid = playHeight / 2;
+      return { min: mid, max: mid };
+    }
+    if (max - min > maxSpan) {
+      const mid = (min + max) / 2;
+      min = mid - maxSpan / 2;
+      max = mid + maxSpan / 2;
+    }
+    return { min, max };
+  }
+
+  // Coins and stats are settled at every game over, but Continue keeps the same
+  // run (and score) going, so only points earned since the last settlement are new.
+  function settleRunScore(score, alreadySettledScore, coinsPerPoint) {
+    const newPoints = Math.max(0, score - alreadySettledScore);
+    return {
+      newPoints,
+      coinsEarned: newPoints * coinsPerPoint,
+      settledScore: Math.max(score, alreadySettledScore)
+    };
   }
 
   function getComboMultiplier(comboCount) {
@@ -38,7 +87,12 @@
   }
 
   const api = {
+    DIFFICULTY_STEP,
     computeProgressiveDifficulty,
+    crossedScoreStep,
+    fitGapToPlayArea,
+    getPipeGapRange,
+    settleRunScore,
     getComboMultiplier,
     getPipeColor,
     getMedal

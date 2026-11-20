@@ -15,18 +15,30 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: npm
 
-      - name: Check shared modules syntax
-        run: |
-          node --check src/core/rules.js
-          node --check src/core/stateMachine.js
-          node --check src/core/storage.js
-          node --check src/render/background.js
-          node --check src/render/pipes.js
-          node --check src/render/bird.js
-          node --check src/render/hud.js
-          node --check src/render/ground.js
+      - name: Install dev dependencies
+        run: npm ci
+
+      # ESLint parses every JS file and the inline <script> in the HTML pages, so it
+      # also covers the syntax checks this job used to run with `node --check`.
+      - name: Lint
+        run: npm run lint
 
       - name: Run regression tests
-        run: node tests/rules_and_state.test.js
+        run: npm test
+
+      - name: Install Chromium for the browser tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser smoke tests
+        run: npm run test:e2e
+
+      - name: Upload screenshots of failed browser tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-screenshots
+          path: test-results/
+          if-no-files-found: ignore

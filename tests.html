@@ -34,7 +34,6 @@
 <script src="src/render/ground.js"></script>
 <script>
 // ─── Minimal Test Framework ────────────────────────────────────────────────
-const tests = [];
 let passed = 0, failed = 0;
 
 function describe(group, fn) {
@@ -1118,6 +1117,7 @@ describe('Game State Transitions', () => {
   it('game running becomes true on startGame', () => {
     let gameRunning = false;
     let score = 99;
+    assert(!gameRunning && score === 99, 'Precondition: stopped with a leftover score');
     // simulate startGame
     gameRunning = true;
     score = 0;
@@ -1144,6 +1144,7 @@ describe('Game State Transitions', () => {
   });
   it('score resets to 0 on restart', () => {
     let score = 42;
+    assertEqual(score, 42, 'Precondition: leftover score');
     // simulate startGame
     score = 0;
     assertEqual(score, 0);
@@ -1380,6 +1381,7 @@ describe('Continue System', () => {
 
   it('continueUsed resets on new game', () => {
     let continueUsed = true;
+    assert(continueUsed, 'Precondition: continue was used last game');
     // Simulate startGame reset
     continueUsed = false;
     assert(!continueUsed, 'continueUsed resets to false');

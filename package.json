@@ -1,0 +1,23 @@
+{
+  "name": "dragon-flight",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dragon Flight, a Flappy-style browser game. The game needs no build step; these scripts are dev tooling.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "node tests/rules_and_state.test.js",
+    "test:e2e": "node --test tests/e2e/smoke.test.js",
+    "check": "npm run lint && npm test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0",
+    "eslint-plugin-html": "8.2.1",
+    "globals": "17.14.0",
+    "playwright": "1.63.0"
+  }
+}

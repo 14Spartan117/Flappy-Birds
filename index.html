@@ -60,9 +60,9 @@
       height: 100%;
       box-sizing: border-box;
     }
+    /* No body padding: the canvas fills the screen and each HUD element adds the
+       safe-area inset itself (via --safe-*), so insets are applied exactly once. */
     body {
-      padding-top: var(--safe-top);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
       font-family: Arial, sans-serif;
       overflow: hidden;
       background-color: #71C5CF;
@@ -76,6 +76,8 @@
       position: relative;
       width: 100%;
       height: 100vh;
+      /* Visible viewport on mobile, so browser toolbars don't cover the bottom */
+      height: 100dvh;
       overflow: hidden;
     }
     /* Canvas fills container */
@@ -97,6 +99,8 @@
       color: white;
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
       z-index: 10;
+      /* Display only: taps on the score strip still reach the canvas (flap) */
+      pointer-events: none;
     }
     #leaderboard {
       position: absolute;
@@ -110,6 +114,11 @@
       font-size: 16px;
       max-width: 200px;
     }
+    /* One line per entry: a long name is shortened, the score always shows */
+    #leaderboard strong { white-space: nowrap; }
+    .lb-row { display: flex; white-space: nowrap; }
+    .lb-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .lb-score { flex: none; }
     #start-high-score {
       font-size: 20px;
       margin: 5px 0 0 0;
@@ -128,6 +137,12 @@
       padding: 10px;
       border-radius: 10px;
       z-index: 20;
+      /* "Tap to start" must work when the tap lands on the message itself */
+      pointer-events: none;
+      /* left: 50% would otherwise cap the auto width at half the screen */
+      width: max-content;
+      max-width: calc(100% - 40px);
+      box-sizing: border-box;
     }
     #achievement-notification {
       position: absolute;
@@ -141,6 +156,9 @@
       transition: opacity 0.5s ease;
       pointer-events: none;
       z-index: 50;
+      width: max-content;
+      max-width: calc(100% - 40px);
+      text-align: center;
     }
     #achievement-notification.visible {
       opacity: 1;
@@ -160,6 +178,10 @@
       border-radius: 10px;
       display: none;
       z-index: 30;
+      /* left: 50% would otherwise cap the auto width at half the screen */
+      width: max-content;
+      max-width: calc(100% - 40px);
+      box-sizing: border-box;
     }
     #game-over button {
       margin-top: 10px;
@@ -175,17 +197,38 @@
       margin-top: 10px;
       font-size: 20px;
     }
-    /* Pause button using our safe-area variables */
-    #pause-button {
+    /* Top-right HUD: rows laid out by flexbox, so controls never overlap each other */
+    #hud-right {
       position: absolute;
       top: calc(20px + var(--safe-top));
       right: calc(20px + var(--safe-right));
       z-index: 40;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+    .hud-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #pause-button, #mute-button, #shop-button {
+      border: none;
+      font-family: inherit;
+      line-height: normal;
+    }
+    #pause-button {
       background: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 5px;
       color: white;
       cursor: pointer;
+      font-size: 16px;
+      /* Fits "Pause" and "Resume", so the HUD row doesn't shift when the label changes */
+      width: 5.5em;
+      box-sizing: border-box;
+      text-align: center;
     }
     /* Bottom controls container – moved up */
     #bottom-controls {
@@ -198,7 +241,10 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: flex-end;
+      /* left: 50% would otherwise cap the auto width at half the screen */
+      width: max-content;
       max-width: calc(100% - 20px);
+      box-sizing: border-box;
       gap: 10px;
       padding: 5px;
       background: rgba(0, 0, 0, 0.5);
@@ -220,12 +266,14 @@
     .difficulty-buttons,
     .skin-buttons {
       display: flex;
+      flex-wrap: wrap;
       justify-content: center;
       gap: 5px;
     }
     .mode-btn,
     .difficulty-btn,
     .skin-btn {
+      white-space: nowrap;
       padding: 5px 10px;
       font-size: 12px;
       border: none;
@@ -241,15 +289,12 @@
     }
     /* Mute button */
     #mute-button {
-      position: absolute;
-      top: calc(20px + var(--safe-top));
-      right: calc(70px + var(--safe-right));
-      z-index: 40;
       background: rgba(0,0,0,0.5);
       padding: 10px;
       border-radius: 5px;
       color: white;
       cursor: pointer;
+      font-size: 16px;
     }
     /* 10. Hover/focus styles for buttons */
     .mode-btn:hover, .difficulty-btn:hover, .skin-btn:hover {
@@ -270,9 +315,13 @@
     #pause-button:hover, #mute-button:hover {
       background: rgba(0,0,0,0.7);
     }
-    #pause-button:focus, #mute-button:focus {
+    #pause-button:focus, #mute-button:focus, #shop-button:focus {
       outline: 2px solid #fff;
       background: rgba(0,0,0,0.7);
+    }
+    #pause-button:disabled {
+      opacity: 0.6;
+      cursor: default;
     }
     /* 5. Name input modal */
     #name-input-modal {
@@ -320,10 +369,6 @@
     }
     /* Coin display */
     #coin-display {
-      position: absolute;
-      top: calc(20px + var(--safe-top));
-      right: calc(120px + var(--safe-right));
-      z-index: 40;
       background: rgba(0,0,0,0.5);
       padding: 8px 12px;
       border-radius: 5px;
@@ -366,10 +411,6 @@
     #remove-ads-btn:hover { filter: brightness(1.2); }
     /* Donate button */
     #donate-button {
-      position: absolute;
-      top: calc(60px + var(--safe-top));
-      right: calc(20px + var(--safe-right));
-      z-index: 40;
       background: #e74c3c;
       padding: 8px 12px;
       border-radius: 5px;
@@ -450,10 +491,6 @@
     #shop-close-btn:hover { filter: brightness(1.15); }
     /* Coin shop open button */
     #shop-button {
-      position: absolute;
-      top: calc(60px + var(--safe-top));
-      right: calc(120px + var(--safe-right));
-      z-index: 40;
       background: rgba(0,0,0,0.5);
       padding: 8px 12px;
       border-radius: 5px;
@@ -507,14 +544,80 @@
       cursor: pointer;
     }
     #rewarded-ad-btn:hover { filter: brightness(1.15); }
+    /* Menu-only controls are hidden during a run (countdown, playing, paused), and
+       run-only controls outside one. #game-container gets .run-active from the script. */
+    #game-container.run-active .menu-only,
+    #game-container:not(.run-active) .run-only {
+      display: none !important;
+    }
+    /* Phones: the HUD row spans the top of the screen, so the score moves below it,
+       and the menu leaderboard shows the top 5 so it clears the start message. */
+    @media (max-width: 560px) {
+      #score-display { top: calc(72px + var(--safe-top)); }
+      #combo-display { top: calc(124px + var(--safe-top)); }
+      /* Narrow enough to clear the HUD's Shop/Donate row (176px) beside it */
+      #leaderboard { max-width: min(150px, calc(100vw - 244px)); font-size: 13px; }
+      #leaderboard-list > div:nth-child(n+6) { display: none; }
+      #start-message { top: 36%; font-size: 22px; }
+      /* The game over panel sits below the HUD and leaderboard, not on top of them */
+      #game-over { top: calc(140px + var(--safe-top)); transform: translateX(-50%); }
+    }
+    /* Narrow phones: compact pickers, so mode and difficulty share one row, and a
+       compact Shop/Donate row (152px) so the leaderboard still fits beside it */
+    @media (max-width: 360px) {
+      #mode-selection h2, #difficulty-selection h2, #skin-selection h2 { margin: 0 0 2px; }
+      .mode-btn, .difficulty-btn, .skin-btn { padding: 4px 6px; font-size: 11px; }
+      #shop-button, #donate-button { padding: 6px 8px; font-size: 12px; }
+      #leaderboard { max-width: min(150px, calc(100vw - 220px)); }
+    }
+    /* Small phones: a shorter leaderboard lets the game over panel move up */
+    @media (max-width: 560px) and (max-height: 640px) {
+      #leaderboard-list > div:nth-child(n+4) { display: none; }
+      #game-over { top: calc(106px + var(--safe-top)); }
+    }
+    /* Phones in portrait or landscape: a compact game over panel, with the medal on
+       the "Game Over!" line and the buttons on one row where they fit */
+    @media (max-width: 560px), (max-height: 500px) {
+      #game-over { font-size: 22px; padding: 12px; }
+      #medal-display { display: inline-block; margin-left: 6px; vertical-align: middle; }
+      #medal-display > span { font-size: 15px; }
+      #final-score { font-size: 18px; }
+      #high-score { font-size: 15px; margin-top: 5px; }
+      #stats-display { font-size: 12px; margin-top: 5px; }
+      #coins-earned { font-size: 13px; }
+      #game-over button { font-size: 15px; padding: 7px 8px; margin-top: 5px; }
+    }
+    /* Phones: let the mode/skin pickers sit over the ground (just above the ad bar)
+       so they don't cover the dragon or the start message. */
+    @media (max-width: 560px) and (max-height: 760px), (max-height: 500px) {
+      #bottom-controls { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+    }
+    /* Portrait tablets: the start message and game over panel clear the full leaderboard */
+    @media (min-width: 561px) and (max-width: 820px) and (min-height: 800px) {
+      #start-message { top: 36%; }
+      #game-over { top: calc(250px + var(--safe-top)); transform: translateX(-50%); }
+    }
+    /* Phones in landscape: a 3-row leaderboard, the start message and game over panel
+       placed clear of the HUD, and compact pickers, so nothing covers anything else. */
+    @media (max-height: 500px) {
+      #leaderboard { font-size: 12px; padding: 6px 8px; max-width: 150px; }
+      #leaderboard-list > div:nth-child(n+4) { display: none; }
+      #start-message { top: calc(106px + var(--safe-top)); transform: translateX(-50%); font-size: 18px; padding: 8px 12px; }
+      #start-high-score { font-size: 14px; margin-top: 2px; }
+      #game-over { top: calc(6px + var(--safe-top)); transform: translateX(-50%); padding: 8px 12px; }
+      #game-over button { margin-top: 3px; }
+      #bottom-controls { gap: 2px 12px; padding: 3px 8px; }
+      #mode-selection h2, #difficulty-selection h2, #skin-selection h2 { font-size: 11px; margin: 0 0 2px; }
+      .mode-btn, .difficulty-btn, .skin-btn { padding: 3px 7px; font-size: 11px; }
+    }
   </style>
 </head>
 <body>
   <div id="game-container">
-    <div id="score-display" aria-live="polite">0</div>
+    <div id="score-display" class="run-only" aria-live="polite">0</div>
     <div id="combo-display"></div>
     <div id="fps-counter">FPS: --</div>
-    <div id="leaderboard">
+    <div id="leaderboard" class="menu-only">
       <strong>Leaderboard</strong>
       <div id="leaderboard-list"></div>
     </div>
@@ -522,7 +625,7 @@
     <div id="start-message">Tap or press ↑ to Start and Flap!<p id="start-high-score"></p></div>
     
     <!-- Bottom Controls: Mode, Difficulty, and Skin Selections -->
-    <div id="bottom-controls">
+    <div id="bottom-controls" class="menu-only">
       <div id="mode-selection">
         <h2>Select Mode</h2>
         <div class="mode-buttons">
@@ -575,20 +678,26 @@
         <button id="name-skip-btn" aria-label="Skip name entry">Skip</button>
       </div>
     </div>
-    <div id="coin-display" aria-live="polite">🪙 0</div>
-    <div id="shop-button" role="button" aria-label="Open coin shop" tabindex="0">🛒 Shop</div>
-    <a id="donate-button" href="https://buymeacoffee.com/14Spartan117" target="_blank" rel="noopener noreferrer" aria-label="Support the developer">❤️ Donate</a>
-    <div id="mute-button" role="button" aria-label="Toggle mute" tabindex="0">🔊</div>
-    <div id="pause-button" role="button" aria-label="Pause game" tabindex="0">Pause</div>
+    <div id="hud-right">
+      <div class="hud-row">
+        <div id="coin-display" aria-live="polite">🪙 0</div>
+        <button type="button" id="mute-button" aria-label="Mute" aria-pressed="false">🔊</button>
+        <button type="button" id="pause-button" class="run-only" aria-label="Pause game">Pause</button>
+      </div>
+      <div class="hud-row menu-only">
+        <button type="button" id="shop-button" aria-label="Open coin shop">🛒 Shop</button>
+        <a id="donate-button" href="https://buymeacoffee.com/14Spartan117" target="_blank" rel="noopener noreferrer" aria-label="Support the developer">❤️ Donate</a>
+      </div>
+    </div>
     <!-- Ad Banner Placeholder -->
     <div id="ad-banner">
       <span>[ Ad Space — Integrate your ad provider here ]</span>
       <button id="remove-ads-btn" aria-label="Remove ads for coins">Remove Ads (500 🪙)</button>
     </div>
     <!-- Coin Shop Modal -->
-    <div id="coin-shop-modal">
+    <div id="coin-shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
       <div class="shop-content">
-        <h2>🛒 Coin Shop</h2>
+        <h2 id="shop-title">🛒 Coin Shop</h2>
         <p id="shop-coin-balance">Your Coins: 🪙 0</p>
         <div class="shop-item">
           <div>
@@ -640,18 +749,6 @@
   <script src="src/render/hud.js"></script>
   <script src="src/render/ground.js"></script>
   <script>
-    // If hosted on GitHub, override safe-area variables and adjust container height.
-    if (window.location.host.includes("github")) {
-      document.documentElement.style.setProperty('--safe-top', '80px');
-      document.documentElement.style.setProperty('--safe-left', '20px');
-      document.documentElement.style.setProperty('--safe-right', '20px');
-      const gameContainer = document.getElementById('game-container');
-      if (gameContainer) {
-        // Subtract 80px (or adjust as needed) to account for GitHub's header
-        gameContainer.style.height = "calc(100vh - 80px)";
-      }
-    }
-    
       // --- Sound Effects using Web Audio API ---
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       let audioCtx;
@@ -710,7 +807,7 @@
       }
 
       document.addEventListener('DOMContentLoaded', () => {
-        const { computeProgressiveDifficulty, getComboMultiplier, getPipeColor, getMedal } = window.DragonRules;
+        const { computeProgressiveDifficulty, crossedScoreStep, fitGapToPlayArea, getPipeGapRange, settleRunScore, getComboMultiplier, getPipeColor, getMedal } = window.DragonRules;
         const { safeLoadJSON, safeLoadNumber, loadSettings, saveSettings, safeSetJSON } = window.DragonStorage;
         const { getDayNightBlend, getSkyColor, getCelestialAlpha, drawTwinklingStars, updateParallaxOffsets, drawParallaxLayers, updateAndDrawClouds } = window.DragonRenderBackground;
         const { drawPipePair, drawPipeWarningOverlay, computeWarningAlpha } = window.DragonRenderPipes;
@@ -763,13 +860,26 @@
       const diamondSkinBtn = document.getElementById('diamond-skin-btn');
       const shadowSkinBtn = document.getElementById('shadow-skin-btn');
   
-      // Set canvas size
+      // Logical (CSS-pixel) size of the playfield. All game code works in these units;
+      // the canvas buffer is scaled by the device pixel ratio (capped for performance)
+      // and the context transform maps logical units onto it, so drawing stays crisp.
+      const MAX_PIXEL_RATIO = 2;
+      let viewWidth = 0;
+      let viewHeight = 0;
+      let pixelRatio = 1;
       function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // Size the buffer from the canvas's real on-screen box rather than the window,
+        // so the picture is never stretched into a container of a different size.
+        const rect = canvas.getBoundingClientRect();
+        viewWidth = Math.max(1, Math.round(rect.width));
+        viewHeight = Math.max(1, Math.round(rect.height));
+        pixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
+        canvas.width = Math.round(viewWidth * pixelRatio);
+        canvas.height = Math.round(viewHeight * pixelRatio);
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         if (birdInitialized) {
-          bird.x = canvas.width / 4;
-          if (!gameStarted) bird.y = canvas.height / 2;
+          bird.x = viewWidth / 4;
+          if (!gameStarted) bird.y = viewHeight / 2;
         }
       }
       let birdInitialized = false;
@@ -780,7 +890,6 @@
       const GROUND_HEIGHT = 100;
       const PARTICLE_COUNT = 20;
       const PARTICLE_FADE_RATE = 0.02;
-      const CLOUD_COUNT = 3;
       const DAY_NIGHT_CYCLE_SPEED = 5000;
       const COUNTDOWN_SECONDS = 3;
       const { GAME_STATES, createStateMachine } = window.DragonStateMachine;
@@ -816,7 +925,10 @@
       let pipeGap = selectedDifficulty.pipeGap;
       let pipeSpawnRate = selectedDifficulty.pipeSpawnRate;
       let pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
-  
+      // Starting speed and gap for the current run; progressive difficulty scales from these.
+      let basePipeSpeed = pipeSpeed;
+      let basePipeGap = pipeGap;
+
       function handleCorruptStorage(keyName) {
         const shouldReset = typeof window.confirm === 'function'
           ? window.confirm(`Saved data for "${keyName}" is corrupted and can be reset. Reset now?`)
@@ -838,6 +950,11 @@
       }
       let adsRemoved = safeLoadJSON(localStorage, 'adsRemoved', false) === true;
       let continueUsed = false;
+      // Per-run bookkeeping. Continue resumes the same run, so its next game over must not
+      // pay coins, count a game, or add a leaderboard entry for the same points again.
+      let runSettledScore = 0;
+      let runCountedInStats = false;
+      let runLeaderboardEntryId = null;
       let score = 0;
       let gameStarted = false;
       let gameRunning = false;
@@ -876,10 +993,6 @@
         saveCoins();
         updateCoinDisplay();
         return true;
-      }
-
-      function calculateCoinsEarned(gameScore) {
-        return gameScore * COINS_PER_SCORE;
       }
 
       function isSkinUnlocked(skinName) {
@@ -922,6 +1035,20 @@
         return gameStateMachine.canTransition(fromState, toState);
       }
 
+      // While a run is in progress (countdown, playing, paused) the menu-only controls
+      // (leaderboard, shop, donate, mode/skin pickers) are hidden and run-only ones shown.
+      const gameContainer = document.getElementById('game-container');
+      function setRunActive(active) {
+        gameContainer.classList.toggle('run-active', active);
+      }
+
+      function renderPauseButton() {
+        pauseButton.innerText = paused ? 'Resume' : 'Pause';
+        pauseButton.setAttribute('aria-label', paused ? 'Resume game' : 'Pause game');
+        // Nothing to pause during the start countdown, and the resume countdown is already running.
+        pauseButton.disabled = !gameRunning || resumeCountdownActive;
+      }
+
       function setGameState(nextState, force = false) {
         if (!gameStateMachine.transition(nextState, force)) return false;
         previousGameState = gameState;
@@ -952,7 +1079,6 @@
       // --- Feature 5: Ghost/Best Run Trail ---
       let bestRunPositions = [];
       let currentRunPositions = [];
-      let ghostRecordInterval = null;
 
       // --- Feature 6: Floating Score Popups ---
       const scorePopups = [];
@@ -983,12 +1109,23 @@
       const fpsCounter = document.getElementById('fps-counter');
       muted = !!userSettings.muted;
       showFPS = !!userSettings.showFPS;
-      muteButton.innerText = muted ? '🔇' : '🔊';
+      renderMuteButton();
       fpsCounter.style.display = showFPS ? 'block' : 'none';
 
       function persistSettings(partial) {
         userSettings = { ...userSettings, ...partial };
         saveSettings(localStorage, userSettings);
+      }
+
+      function renderMuteButton() {
+        muteButton.innerText = muted ? '🔇' : '🔊';
+        muteButton.setAttribute('aria-pressed', String(muted));
+      }
+
+      function toggleMute() {
+        muted = !muted;
+        renderMuteButton();
+        persistSettings({ muted });
       }
 
       // --- Feature 15: Stats Tracking ---
@@ -1010,7 +1147,7 @@
       function spawnConfetti() {
         for (let i = 0; i < 60; i++) {
           confettiParticles.push({
-            x: Math.random() * canvas.width,
+            x: Math.random() * viewWidth,
             y: -10,
             vx: (Math.random() - 0.5) * 4,
             vy: Math.random() * 3 + 1,
@@ -1030,7 +1167,7 @@
           p.y += p.vy * dt;
           p.rotation += p.rotSpeed * dt;
           p.alpha -= 0.008 * dt;
-          if (p.alpha <= 0 || p.y > canvas.height + 20) confettiParticles.splice(i, 1);
+          if (p.alpha <= 0 || p.y > viewHeight + 20) confettiParticles.splice(i, 1);
         }
       }
       function drawConfetti() {
@@ -1118,8 +1255,8 @@
       };
   
       const bird = {
-        x: canvas.width / 4,
-        y: canvas.height / 2,
+        x: viewWidth / 4,
+        y: viewHeight / 2,
         width: 50,
         height: 40,
         velocity: 0,
@@ -1203,12 +1340,16 @@
         update(dt) {
           this.velocity += gravity * dt;
           this.y += this.velocity * dt;
-          if (this.y + this.height / 2 > canvas.height - GROUND_HEIGHT) {
-            this.y = canvas.height - GROUND_HEIGHT - this.height / 2;
+          // The ground and the top of the screen stay fixed on screen while the dragon and
+          // pipes are drawn with the camera offset, so collide where they appear on screen.
+          const groundY = viewHeight - GROUND_HEIGHT - cameraOffsetY;
+          if (this.y + this.height / 2 > groundY) {
+            this.y = groundY - this.height / 2;
             gameOver();
           }
-          if (this.y - this.height / 2 < 0) {
-            this.y = this.height / 2;
+          const ceilingY = -cameraOffsetY;
+          if (this.y - this.height / 2 < ceilingY) {
+            this.y = ceilingY + this.height / 2;
             this.velocity = 0;
           }
         },
@@ -1223,9 +1364,8 @@
         this.x = x;
         this.width = basePipeWidth;
         this.scored = false;
-        const minGapY = pipeGap + GROUND_HEIGHT;
-        const maxGapY = canvas.height - pipeGap - 2 * GROUND_HEIGHT;
-        this.gapY = Math.random() * (maxGapY - minGapY) + minGapY;
+        const gapRange = getPipeGapRange(viewHeight - GROUND_HEIGHT, pipeGap);
+        this.gapY = gapRange.min + Math.random() * (gapRange.max - gapRange.min);
 
         this.draw = function() {
           const colors = getPipeColor(score);
@@ -1236,10 +1376,10 @@
           let capColor = colors.cap;
           if (distToPipe < warnThreshold && gameRunning) {
             const warnAlpha = computeWarningAlpha(distToPipe, warnThreshold, Date.now());
-            drawPipePair(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, canvas.height, colors.body, colors.cap);
-            drawPipeWarningOverlay(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, canvas.height, warnAlpha);
+            drawPipePair(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, viewHeight, colors.body, colors.cap);
+            drawPipeWarningOverlay(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, viewHeight, warnAlpha);
           } else {
-            drawPipePair(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, canvas.height, bodyColor, capColor);
+            drawPipePair(ctx, this.x, this.width, this.gapY, pipeGap, GROUND_HEIGHT, viewHeight, bodyColor, capColor);
           }
           // --- Feature 25: Pipe gap center marker ---
           ctx.save();
@@ -1268,6 +1408,7 @@
             // Determine multiplier
             const multiplier = getComboMultiplier(comboCount);
 
+            const previousScore = score;
             score += multiplier;
             scoreDisplay.innerText = score;
 
@@ -1284,8 +1425,7 @@
             });
 
             // --- Feature 3: Progressive difficulty scaling ---
-            if (score % 10 === 0) {
-              const basePipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
+            if (crossedScoreStep(previousScore, score)) {
               const scaled = computeProgressiveDifficulty(score, basePipeSpeed, basePipeGap);
               pipeSpeed = scaled.pipeSpeed;
               pipeGap = scaled.pipeGap;
@@ -1313,7 +1453,11 @@
       function updateGameParameters() {
         pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
         pipeGap = (gameMode === "Challenge" ? selectedDifficulty.pipeGap * 0.8 : selectedDifficulty.pipeGap);
+        // On very short screens (phones in landscape) a gap can be taller than the sky.
+        pipeGap = fitGapToPlayArea(pipeGap, viewHeight - GROUND_HEIGHT);
         pipeSpawnRate = (gameMode === "Challenge" ? selectedDifficulty.pipeSpawnRate * 0.8 : selectedDifficulty.pipeSpawnRate);
+        basePipeSpeed = pipeSpeed;
+        basePipeGap = pipeGap;
       }
   
       // --- Feature 7: Parallax layers state ---
@@ -1327,13 +1471,13 @@
         const nowMs = Date.now();
         const t = getDayNightBlend(nowMs, DAY_NIGHT_CYCLE_SPEED);
         ctx.fillStyle = getSkyColor(t, dayColor, nightColor);
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, viewWidth, viewHeight);
 
         // --- Feature 9: Twinkling stars at night ---
-        drawTwinklingStars(ctx, stars, canvas.width, canvas.height, t, nowMs);
+        drawTwinklingStars(ctx, stars, viewWidth, viewHeight, t, nowMs);
 
         // --- Feature 21: Sun and Moon celestial body ---
-        const celestialX = canvas.width * 0.85;
+        const celestialX = viewWidth * 0.85;
         if (t >= 0.5) {
           // Sun (daytime)
           const sunAlpha = getCelestialAlpha(t, 'sun');
@@ -1341,11 +1485,11 @@
           ctx.globalAlpha = sunAlpha;
           ctx.fillStyle = '#FFD700';
           ctx.beginPath();
-          ctx.arc(celestialX, canvas.height * 0.15, 28, 0, Math.PI * 2);
+          ctx.arc(celestialX, viewHeight * 0.15, 28, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = 'rgba(255,220,0,0.35)';
           ctx.beginPath();
-          ctx.arc(celestialX, canvas.height * 0.15, 42, 0, Math.PI * 2);
+          ctx.arc(celestialX, viewHeight * 0.15, 42, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         } else {
@@ -1355,24 +1499,24 @@
           ctx.globalAlpha = moonAlpha;
           ctx.fillStyle = '#FFFDE7';
           ctx.beginPath();
-          ctx.arc(celestialX, canvas.height * 0.15, 22, 0, Math.PI * 2);
+          ctx.arc(celestialX, viewHeight * 0.15, 22, 0, Math.PI * 2);
           ctx.fill();
           // Crater detail
           ctx.fillStyle = 'rgba(200,200,160,0.5)';
           ctx.beginPath();
-          ctx.arc(celestialX + 6, canvas.height * 0.15 - 5, 5, 0, Math.PI * 2);
+          ctx.arc(celestialX + 6, viewHeight * 0.15 - 5, 5, 0, Math.PI * 2);
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(celestialX - 7, canvas.height * 0.15 + 6, 3, 0, Math.PI * 2);
+          ctx.arc(celestialX - 7, viewHeight * 0.15 + 6, 3, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
 
-        const nextOffsets = updateParallaxOffsets(gameRunning, parallaxOffset1, parallaxOffset2, canvas.width);
+        const nextOffsets = updateParallaxOffsets(gameRunning, parallaxOffset1, parallaxOffset2, viewWidth);
         parallaxOffset1 = nextOffsets.parallaxOffset1;
         parallaxOffset2 = nextOffsets.parallaxOffset2;
-        drawParallaxLayers(ctx, canvas.width, canvas.height, GROUND_HEIGHT, t, parallaxOffset1, parallaxOffset2);
-        updateAndDrawClouds(ctx, clouds, canvas.width, canvas.height);
+        drawParallaxLayers(ctx, viewWidth, viewHeight, GROUND_HEIGHT, t, parallaxOffset1, parallaxOffset2);
+        updateAndDrawClouds(ctx, clouds, viewWidth, viewHeight);
       }
 
       // --- Feature 12: Animated ground with grass blades ---
@@ -1381,20 +1525,20 @@
       function drawGround() {
         grassTimer += 0.03;
         groundOffset = computeGroundOffset(groundOffset, gameRunning, pipeSpeed);
-        drawGroundAndGrass(ctx, canvas.width, canvas.height, GROUND_HEIGHT, groundOffset, grassTimer);
+        drawGroundAndGrass(ctx, viewWidth, viewHeight, GROUND_HEIGHT, groundOffset, grassTimer);
       }
 
       // --- Feature 16: Bird Ground Shadow (projected onto ground) ---
       function drawBirdGroundShadow() {
-        const groundY = canvas.height - GROUND_HEIGHT;
+        const groundY = viewHeight - GROUND_HEIGHT;
         const visualBirdY = bird.y + cameraOffsetY;
         renderBirdGroundShadow(ctx, bird.x, visualBirdY, groundY);
       }
   
       let clouds = [
-        {x: canvas.width * 0.2, y: canvas.height * 0.2, speed: 0.3, size: 1.0},
-        {x: canvas.width * 0.7, y: canvas.height * 0.3, speed: 0.5, size: 1.2},
-        {x: canvas.width * 0.4, y: canvas.height * 0.15, speed: 0.2, size: 0.7}
+        {x: viewWidth * 0.2, y: viewHeight * 0.2, speed: 0.3, size: 1.0},
+        {x: viewWidth * 0.7, y: viewHeight * 0.3, speed: 0.5, size: 1.2},
+        {x: viewWidth * 0.4, y: viewHeight * 0.15, speed: 0.2, size: 0.7}
       ];
   
       function spawnParticles(x, y) {
@@ -1419,9 +1563,9 @@
           if (
             p.alpha <= 0.05 ||
             (p.x + p.radius < 0) ||
-            (p.x - p.radius > canvas.width) ||
+            (p.x - p.radius > viewWidth) ||
             (p.y + p.radius < 0) ||
-            (p.y - p.radius > canvas.height)
+            (p.y - p.radius > viewHeight)
           ) {
             particles.splice(i, 1);
           }
@@ -1525,6 +1669,9 @@
         if (!timestamp) timestamp = performance.now();
         const elapsed = timestamp - lastFrameTime;
         lastFrameTime = timestamp;
+        // A pixel-ratio change without a resize (e.g. the window moved to a monitor with a
+        // different scale) fires no 'resize' event, so compare it every frame.
+        if (Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO) !== pixelRatio) resizeCanvas();
         // Normalize dt to 60fps (16.67ms per frame); clamp to MAX_DT_MULTIPLIER
         const dt = Math.min(elapsed / TARGET_FRAME_MS, MAX_DT_MULTIPLIER);
 
@@ -1547,12 +1694,16 @@
         }
 
         // --- Feature 10: Smooth camera follow ---
-        const targetOffsetY = -(bird.y - canvas.height / 2) * 0.1;
-        cameraOffsetY += (targetOffsetY - cameraOffsetY) * 0.05 * dt;
-        // Clamp so we don't scroll into the ground
-        cameraOffsetY = Math.max(Math.min(cameraOffsetY, canvas.height * 0.15), -canvas.height * 0.15);
+        // Only while the run is live: a paused or finished frame must not drift away
+        // from the fixed ground (the dragon would float above it after a crash).
+        if (gameRunning && !paused) {
+          const targetOffsetY = -(bird.y - viewHeight / 2) * 0.1;
+          cameraOffsetY += (targetOffsetY - cameraOffsetY) * 0.05 * dt;
+          // Clamp so we don't scroll into the ground
+          cameraOffsetY = Math.max(Math.min(cameraOffsetY, viewHeight * 0.15), -viewHeight * 0.15);
+        }
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, viewWidth, viewHeight);
         ctx.save();
         ctx.translate(shakeX, shakeY);
 
@@ -1622,7 +1773,15 @@
         leaderboardList.innerHTML = '';
         top10.forEach((entry, index) => {
           const div = document.createElement('div');
-          div.textContent = `${entry.name}: ${entry.score}`;
+          div.className = 'lb-row';
+          const name = document.createElement('span');
+          name.className = 'lb-name';
+          name.textContent = entry.name;
+          const entryScore = document.createElement('span');
+          entryScore.className = 'lb-score';
+          entryScore.textContent = `: ${entry.score}`;
+          div.append(name, entryScore);
+          div.title = `${entry.name}: ${entry.score}`;
           if (index === 0) {
             div.style.color = 'gold';
             div.style.fontWeight = 'bold';
@@ -1633,20 +1792,37 @@
   
       function addScoreToLeaderboard() {
         if (score <= 0) return;
+        // After a Continue, update the entry already submitted for this run instead of
+        // asking for a name again (and adding a second entry for the same run).
+        if (runLeaderboardEntryId && updateLeaderboardEntryScore(runLeaderboardEntryId, score)) return;
         nameInputModal.classList.add('visible');
         playerNameInput.value = '';
         playerNameInput.focus();
+      }
+
+      function updateLeaderboardEntryScore(entryId, newScore) {
+        const board = getLeaderboard();
+        const entry = board.find((item) => item && item.id === entryId);
+        if (!entry) return false;
+        entry.score = Math.max(entry.score, newScore);
+        board.sort((a, b) => b.score - a.score);
+        board.splice(LEADERBOARD_MAX_ENTRIES);
+        setLeaderboard(board);
+        updateLeaderboardDisplay();
+        return true;
       }
 
       function submitLeaderboardEntry(playerName) {
         nameInputModal.classList.remove('visible');
         if (playerName) {
           const board = getLeaderboard();
-          board.push({ name: playerName, score: score });
+          const entryId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          board.push({ name: playerName, score: score, id: entryId });
           board.sort((a, b) => b.score - a.score);
           board.splice(LEADERBOARD_MAX_ENTRIES);
           setLeaderboard(board);
           updateLeaderboardDisplay();
+          runLeaderboardEntryId = entryId;
         }
       }
 
@@ -1670,16 +1846,22 @@
         if (!gameRunning) return;
         const currentTime = Date.now();
         if (currentTime - lastPipeTime > pipeSpawnRate) {
-          pipes.push(new Pipe(canvas.width));
+          pipes.push(new Pipe(viewWidth));
           lastPipeTime = currentTime;
         }
       }
   
       function startCountdown() {
         if (countdownActive) return;
+        closeShop({ restoreFocus: false });
         setGameState(GAME_STATES.COUNTDOWN);
+        setRunActive(true);
         countdownActive = true;
         resumeCountdownActive = false;
+        // The score strip shows during the countdown, so clear the previous run's score now.
+        scoreDisplay.innerText = 0;
+        comboDisplay.innerText = '';
+        renderPauseButton();
         gameOverMessage.style.display = 'none';
         nameInputModal.classList.remove('visible');
         document.getElementById('difficulty-selection').style.display = 'none';
@@ -1710,7 +1892,7 @@
         startMessage.style.display = 'none';
         gameOverMessage.style.display = 'none';
         document.getElementById('bottom-controls').style.display = 'none';
-        bird.y = canvas.height / 2;
+        bird.y = viewHeight / 2;
         bird.velocity = 0;
         pipes.length = 0;
         particles.length = 0;
@@ -1727,7 +1909,11 @@
         lastPipeTime = Date.now();
         lastFrameTime = performance.now();
         continueUsed = false;
-        pauseButton.innerText = 'Pause';
+        runSettledScore = 0;
+        runCountedInStats = false;
+        runLeaderboardEntryId = null;
+        cameraOffsetY = 0;
+        renderPauseButton();
       }
   
       function updateHighScore() {
@@ -1745,6 +1931,7 @@
       function gameOver() {
         if (!gameRunning) return;
         setGameState(GAME_STATES.GAME_OVER);
+        setRunActive(false);
         gameRunning = false;
         paused = false;
         resumeCountdownActive = false;
@@ -1760,8 +1947,15 @@
         }
 
         // --- Feature 15: Update stats ---
-        statsData.totalGames++;
-        statsData.totalScore += score;
+        // Only points earned since the last game over are new: Continue keeps the same
+        // run and score going, and the run counts as one game.
+        const settlement = settleRunScore(score, runSettledScore, COINS_PER_SCORE);
+        runSettledScore = settlement.settledScore;
+        if (!runCountedInStats) {
+          statsData.totalGames++;
+          runCountedInStats = true;
+        }
+        statsData.totalScore += settlement.newPoints;
         if (score > statsData.bestStreak) statsData.bestStreak = score;
         saveStats();
 
@@ -1786,8 +1980,8 @@
         // Reset combo display
         comboDisplay.innerText = '';
 
-        // --- Monetization: Award coins for the run ---
-        const coinsEarned = calculateCoinsEarned(score);
+        // --- Monetization: Award coins for the points not yet paid out this run ---
+        const coinsEarned = settlement.coinsEarned;
         if (coinsEarned > 0) {
           addCoins(coinsEarned);
           coinsEarnedDisplay.innerText = `+${coinsEarned} 🪙 earned!`;
@@ -1822,12 +2016,13 @@
         paused = true;
         resumeCountdownActive = false;
         setGameState(GAME_STATES.PAUSED);
-        pauseButton.innerText = 'Resume';
+        renderPauseButton();
       }
 
       function resumeGameWithCountdown() {
         if (!paused || resumeCountdownActive) return;
         resumeCountdownActive = true;
+        renderPauseButton();
         setGameState(GAME_STATES.COUNTDOWN);
         let countdown = COUNTDOWN_SECONDS;
         startMessage.style.display = 'block';
@@ -1843,7 +2038,7 @@
           paused = false;
           resumeCountdownActive = false;
           setGameState(GAME_STATES.RUNNING);
-          pauseButton.innerText = 'Pause';
+          renderPauseButton();
         }, 1000);
       }
 
@@ -1880,6 +2075,7 @@
         if (continueUsed || coins < CONTINUE_COST) return;
         if (!spendCoins(CONTINUE_COST)) return;
         continueUsed = true;
+        closeShop({ restoreFocus: false });
         setGameState(GAME_STATES.RUNNING);
         gameOverMessage.style.display = 'none';
         nameInputModal.classList.remove('visible');
@@ -1887,13 +2083,16 @@
         document.getElementById('difficulty-selection').style.display = 'none';
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('skin-selection').style.display = 'none';
+        setRunActive(true);
         gameRunning = true;
         paused = false;
-        bird.y = canvas.height / 2;
+        bird.y = viewHeight / 2;
         bird.velocity = 0;
+        cameraOffsetY = 0;
         pipes.length = 0;
         lastPipeTime = Date.now();
         lastFrameTime = performance.now();
+        renderPauseButton();
       });
 
       // --- Monetization: Rewarded ad (simulated) ---
@@ -1905,20 +2104,43 @@
         continueButton.disabled = coins < CONTINUE_COST || continueUsed;
       });
 
-      // --- Monetization: Coin shop ---
-      shopButton.addEventListener('click', () => {
+      // --- Monetization: Coin shop (a modal dialog) ---
+      // While it is open, focus moves into it and everything behind it is inert, so
+      // keyboard users can't reach (and start a run with) controls hidden under it.
+      const shopCloseBtn = document.getElementById('shop-close-btn');
+      let shopReturnFocus = null;
+
+      function setShopBackgroundInert(inert) {
+        Array.from(gameContainer.children).forEach((el) => {
+          if (el !== coinShopModal) el.inert = inert;
+        });
+      }
+
+      function openShop() {
+        if (coinShopModal.classList.contains('visible')) return;
         setGameState(GAME_STATES.SHOP);
         updateCoinDisplay();
         updateShopButtons();
+        shopReturnFocus = document.activeElement;
         coinShopModal.classList.add('visible');
-      });
+        setShopBackgroundInert(true);
+        const firstButton = coinShopModal.querySelector('button:not([disabled])');
+        if (firstButton) firstButton.focus();
+      }
 
-      document.getElementById('shop-close-btn').addEventListener('click', () => {
+      function closeShop({ restoreFocus = true } = {}) {
+        if (!coinShopModal.classList.contains('visible')) return;
         const fallbackState = gameRunning ? GAME_STATES.RUNNING : (gameStarted ? GAME_STATES.GAME_OVER : GAME_STATES.MENU);
         const restoreState = canTransitionState(gameState, previousGameState) ? previousGameState : fallbackState;
         setGameState(restoreState, true);
         coinShopModal.classList.remove('visible');
-      });
+        setShopBackgroundInert(false);
+        if (restoreFocus && shopReturnFocus && shopReturnFocus.isConnected) shopReturnFocus.focus();
+        shopReturnFocus = null;
+      }
+
+      shopButton.addEventListener('click', openShop);
+      shopCloseBtn.addEventListener('click', () => closeShop());
 
       function updateShopButtons() {
         const buyDiamondBtn = document.getElementById('buy-diamond-btn');
@@ -1979,8 +2201,36 @@
       pauseButton.addEventListener('click', () => {
         togglePauseResume();
       });
-  
+
+      // Space on a focused button presses it (for keyboard users, see the keydown handler),
+      // so a mouse or touch click must not leave focus on a button that stays on screen
+      // during a run; otherwise Space would press it again instead of pausing.
+      // Keyboard activation (e.detail === 0) keeps focus.
+      [pauseButton, muteButton, shopButton, removeAdsBtn].forEach((button) => {
+        button.addEventListener('click', (e) => {
+          if (e.detail > 0) button.blur();
+        });
+      });
+
+      // Keys typed into a text field (the leaderboard name) belong to that field, and
+      // nothing should react behind an open dialog.
+      function isTextEntryTarget(target) {
+        return Boolean(target && target.closest &&
+          target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'));
+      }
+
+      function isModalOpen() {
+        return nameInputModal.classList.contains('visible') || coinShopModal.classList.contains('visible');
+      }
+
       document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && coinShopModal.classList.contains('visible')) {
+          closeShop();
+          return;
+        }
+        if (isTextEntryTarget(e.target) || isModalOpen()) return;
+        // Space on a focused button or link activates that control natively.
+        if (e.code === 'Space' && e.target.closest && e.target.closest('button, a[href]')) return;
         if (e.code === 'Space') {
           e.preventDefault();
           togglePauseResume();
@@ -1994,9 +2244,7 @@
           }
         }
         if (e.code === 'KeyM') {
-          muted = !muted;
-          muteButton.innerText = muted ? '🔇' : '🔊';
-          persistSettings({ muted });
+          toggleMute();
         }
         // --- Feature 14: FPS toggle ---
         if (e.code === 'KeyF') {
@@ -2006,11 +2254,7 @@
         }
       });
 
-      muteButton.addEventListener('click', () => {
-        muted = !muted;
-        muteButton.innerText = muted ? '🔇' : '🔊';
-        persistSettings({ muted });
-      });
+      muteButton.addEventListener('click', toggleMute);
   
       function setupButtonGroup(buttons, callback) {
         buttons.forEach(({el, value}) => {
@@ -2039,8 +2283,7 @@
             // Revert selection to current skin
             document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('selected'));
             document.getElementById(`${selectedSkin}-skin-btn`).classList.add('selected');
-            coinShopModal.classList.add('visible');
-            updateShopButtons();
+            openShop();
             return;
           }
           selectedSkin = value;
@@ -2075,6 +2318,23 @@
         }
       });
   
+      // Test hook for the browser smoke tests (tests/e2e). Only present with ?e2e in the
+      // URL: read-only game state, plus the same flap that a tap performs.
+      if (new URLSearchParams(window.location.search).has('e2e')) {
+        window.__dragonE2E = {
+          state: () => ({
+            score, coins, muted, showFPS, paused, gameRunning, gameStarted, continueUsed,
+            pipeGap, pipeSpeed, cameraOffsetY, viewWidth, viewHeight, pixelRatio,
+            groundHeight: GROUND_HEIGHT,
+            bird: { x: bird.x, y: bird.y, width: bird.width, height: bird.height, velocity: bird.velocity },
+            pipes: pipes.map((p) => ({ x: p.x, width: p.width, gapY: p.gapY, scored: p.scored }))
+          }),
+          flap: () => {
+            if (gameRunning && !paused) bird.flap();
+          }
+        };
+      }
+
       startHighScore.innerText = highScore > 0 ? `High Score: ${highScore}` : '';
       updateLeaderboardDisplay();
       gameLoop();
