@@ -5,7 +5,8 @@ const globals = require('globals');
 const html = require('eslint-plugin-html');
 
 module.exports = [
-  { ignores: ['node_modules/**', 'test-results/**'] },
+  // .claude/ holds Claude Code's local worktrees and settings, never game code.
+  { ignores: ['node_modules/**', 'test-results/**', '.claude/**'] },
   js.configs.recommended,
   {
     rules: {

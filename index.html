@@ -114,6 +114,11 @@
       font-size: 16px;
       max-width: 200px;
     }
+    /* One line per entry: a long name is shortened, the score always shows */
+    #leaderboard strong { white-space: nowrap; }
+    .lb-row { display: flex; white-space: nowrap; }
+    .lb-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .lb-score { flex: none; }
     #start-high-score {
       font-size: 20px;
       margin: 5px 0 0 0;
@@ -220,6 +225,10 @@
       color: white;
       cursor: pointer;
       font-size: 16px;
+      /* Fits "Pause" and "Resume", so the HUD row doesn't shift when the label changes */
+      width: 5.5em;
+      box-sizing: border-box;
+      text-align: center;
     }
     /* Bottom controls container – moved up */
     #bottom-controls {
@@ -546,30 +555,37 @@
     @media (max-width: 560px) {
       #score-display { top: calc(72px + var(--safe-top)); }
       #combo-display { top: calc(124px + var(--safe-top)); }
-      #leaderboard { max-width: 150px; font-size: 13px; }
+      /* Narrow enough to clear the HUD's Shop/Donate row (176px) beside it */
+      #leaderboard { max-width: min(150px, calc(100vw - 244px)); font-size: 13px; }
       #leaderboard-list > div:nth-child(n+6) { display: none; }
       #start-message { top: 36%; font-size: 22px; }
       /* The game over panel sits below the HUD and leaderboard, not on top of them */
       #game-over { top: calc(140px + var(--safe-top)); transform: translateX(-50%); }
     }
-    /* Narrow phones: compact pickers, so mode and difficulty share one row */
+    /* Narrow phones: compact pickers, so mode and difficulty share one row, and a
+       compact Shop/Donate row (152px) so the leaderboard still fits beside it */
     @media (max-width: 360px) {
       #mode-selection h2, #difficulty-selection h2, #skin-selection h2 { margin: 0 0 2px; }
       .mode-btn, .difficulty-btn, .skin-btn { padding: 4px 6px; font-size: 11px; }
+      #shop-button, #donate-button { padding: 6px 8px; font-size: 12px; }
+      #leaderboard { max-width: min(150px, calc(100vw - 220px)); }
     }
     /* Small phones: a shorter leaderboard lets the game over panel move up */
     @media (max-width: 560px) and (max-height: 640px) {
       #leaderboard-list > div:nth-child(n+4) { display: none; }
       #game-over { top: calc(106px + var(--safe-top)); }
     }
-    /* Phones in portrait or landscape: a compact game over panel */
+    /* Phones in portrait or landscape: a compact game over panel, with the medal on
+       the "Game Over!" line and the buttons on one row where they fit */
     @media (max-width: 560px), (max-height: 500px) {
       #game-over { font-size: 22px; padding: 12px; }
+      #medal-display { display: inline-block; margin-left: 6px; vertical-align: middle; }
+      #medal-display > span { font-size: 15px; }
       #final-score { font-size: 18px; }
       #high-score { font-size: 15px; margin-top: 5px; }
       #stats-display { font-size: 12px; margin-top: 5px; }
       #coins-earned { font-size: 13px; }
-      #game-over button { font-size: 15px; padding: 7px 10px; margin-top: 5px; }
+      #game-over button { font-size: 15px; padding: 7px 8px; margin-top: 5px; }
     }
     /* Phones: let the mode/skin pickers sit over the ground (just above the ad bar)
        so they don't cover the dragon or the start message. */
@@ -869,17 +885,6 @@
       let birdInitialized = false;
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
-      // The pixel ratio can change without a resize (e.g. the window moves to a monitor
-      // with a different scale): re-size the buffer then too, re-arming for the new ratio.
-      function watchPixelRatio() {
-        const query = window.matchMedia && window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
-        if (!query || !query.addEventListener) return;
-        query.addEventListener('change', () => {
-          resizeCanvas();
-          watchPixelRatio();
-        }, { once: true });
-      }
-      watchPixelRatio();
   
       // Named constants
       const GROUND_HEIGHT = 100;
@@ -1664,6 +1669,9 @@
         if (!timestamp) timestamp = performance.now();
         const elapsed = timestamp - lastFrameTime;
         lastFrameTime = timestamp;
+        // A pixel-ratio change without a resize (e.g. the window moved to a monitor with a
+        // different scale) fires no 'resize' event, so compare it every frame.
+        if (Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO) !== pixelRatio) resizeCanvas();
         // Normalize dt to 60fps (16.67ms per frame); clamp to MAX_DT_MULTIPLIER
         const dt = Math.min(elapsed / TARGET_FRAME_MS, MAX_DT_MULTIPLIER);
 
@@ -1765,7 +1773,15 @@
         leaderboardList.innerHTML = '';
         top10.forEach((entry, index) => {
           const div = document.createElement('div');
-          div.textContent = `${entry.name}: ${entry.score}`;
+          div.className = 'lb-row';
+          const name = document.createElement('span');
+          name.className = 'lb-name';
+          name.textContent = entry.name;
+          const entryScore = document.createElement('span');
+          entryScore.className = 'lb-score';
+          entryScore.textContent = `: ${entry.score}`;
+          div.append(name, entryScore);
+          div.title = `${entry.name}: ${entry.score}`;
           if (index === 0) {
             div.style.color = 'gold';
             div.style.fontWeight = 'bold';

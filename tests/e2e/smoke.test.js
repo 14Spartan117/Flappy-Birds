@@ -210,21 +210,25 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
   });
 
   test('the leaderboard name field receives W, M, F and spaces', async (t) => {
+    // Each toggle key (F, M) appears exactly once, so a hotkey firing can't cancel itself out.
+    const NAME = 'Fran W. Mole';
     await withGame(t, {}, async ({ page }) => {
       await startRun(page, { difficulty: 'Easy' });
       await waitForScore(page, 1);
       await setAutopilot(page, false);
       await page.waitForSelector('#name-input-modal.visible');
       const before = await gameState(page);
+      const settingsBefore = await page.evaluate(() => localStorage.getItem('dragonSettings'));
       await page.click('#player-name-input');
-      await page.keyboard.type('Will Moffat');
-      assert.equal(await page.inputValue('#player-name-input'), 'Will Moffat');
+      await page.keyboard.type(NAME);
+      assert.equal(await page.inputValue('#player-name-input'), NAME);
       const after = await gameState(page);
       assert.equal(after.muted, before.muted, 'typing M must not toggle mute');
       assert.equal(after.showFPS, before.showFPS, 'typing F must not toggle the FPS counter');
+      assert.equal(await page.evaluate(() => localStorage.getItem('dragonSettings')), settingsBefore, 'saved settings unchanged');
       await page.keyboard.press('Enter');
       const board = await page.evaluate(() => JSON.parse(localStorage.getItem('leaderboard')));
-      assert.equal(board[0].name, 'Will Moffat');
+      assert.equal(board[0].name, NAME);
     });
   });
 
@@ -346,8 +350,11 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
       await startRun(page, { difficulty: 'Easy' });
       assert.equal(await page.isDisabled('#pause-button'), false, 'enabled while running');
       await waitForScore(page, 1);
+      const muteLeft = () => page.evaluate(() => document.getElementById('mute-button').getBoundingClientRect().left);
+      const leftWhileRunning = await muteLeft();
       await page.keyboard.press('Space');
       assert.equal(await page.isDisabled('#pause-button'), false, 'Resume is enabled while paused');
+      assert.equal(await muteLeft(), leftWhileRunning, 'the "Resume" label does not shift the HUD');
       await page.keyboard.press('Space');
       assert.equal(await page.isDisabled('#pause-button'), true, 'disabled during the resume countdown');
       await page.waitForFunction(() => !window.__dragonE2E.state().paused, null, { timeout: 6_000 });
@@ -422,10 +429,22 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
     });
   });
 
-  for (const deviceName of ['iPhone 13', 'iPhone SE (3rd gen)', 'Galaxy S9+', 'iPhone 13 landscape', 'iPad (gen 11)']) {
+  // Long names (the field allows 20 characters) alternate with short ones.
+  const LAYOUT_NAMES = ['Christopher Robinson', 'Ava', 'Elizabeth Richardson', 'Ben', 'Maximilian Fernandez',
+    'Cleo', 'Alexandra Montgomery', 'Dev', 'Jonathan Livingstone', 'Eli'];
+  const LAYOUT_DEVICES = [
+    ['iPhone 13', devices['iPhone 13']],
+    ['iPhone SE (3rd gen)', devices['iPhone SE (3rd gen)']],
+    // The visible Safari area of an iPhone SE / 8 with both toolbars showing.
+    ['iPhone SE in Safari (375x548)', { ...devices['iPhone SE (3rd gen)'], viewport: { width: 375, height: 548 } }],
+    ['Galaxy S9+', devices['Galaxy S9+']],
+    ['iPhone 13 landscape', devices['iPhone 13 landscape']],
+    ['iPad (gen 11)', devices['iPad (gen 11)']]
+  ];
+  for (const [deviceName, contextOptions] of LAYOUT_DEVICES) {
     test(`${deviceName}: menu, run and game over layouts have no overlaps`, async (t) => {
-      const leaderboard = JSON.stringify(Array.from({ length: 10 }, (_, i) => ({ name: `Player ${i + 1}`, score: 60 - i * 5 })));
-      const options = { context: devices[deviceName], storage: { leaderboard, dragonCoins: '1250', highScore: '60' } };
+      const leaderboard = JSON.stringify(LAYOUT_NAMES.map((name, i) => ({ name, score: 60 - i * 5 })));
+      const options = { context: contextOptions, storage: { leaderboard, dragonCoins: '123456', highScore: '60' } };
       await withGame(t, options, async ({ page }) => {
         const { width } = page.viewportSize();
         assertNoOverlap(await visibleBoxes(page, [
@@ -447,9 +466,12 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
           '#score-display::text', '#combo-display::text', '#coin-display', '#mute-button', '#pause-button'
         ]), 'run');
 
+        // 10+ points adds a medal to the game over panel, its tallest form.
+        await waitForScore(page, 10);
         await setAutopilot(page, false);
         await page.waitForSelector('#name-input-modal.visible');
         await page.click('#name-skip-btn');
+        assert.ok(await page.isVisible('#medal-display span'), 'the game over panel shows a medal');
         assertNoOverlap(await visibleBoxes(page, [
           '#game-over', '#leaderboard', '#coin-display', '#mute-button', '#shop-button', '#donate-button',
           '#bottom-controls'
@@ -457,6 +479,16 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
       });
     });
   }
+
+  test('the canvas re-renders when the pixel ratio changes without a resize', async (t) => {
+    await withGame(t, { context: { viewport: { width: 1000, height: 700 }, deviceScaleFactor: 1 } }, async ({ page, context }) => {
+      assert.equal(await page.evaluate(() => document.getElementById('game-canvas').width), 1000);
+      // Like dragging the window onto a 2x display: same CSS size, new pixel ratio.
+      const cdp = await context.newCDPSession(page);
+      await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1000, height: 700, deviceScaleFactor: 2, mobile: false });
+      await page.waitForFunction(() => document.getElementById('game-canvas').width === 2000, null, { timeout: 5_000 });
+    });
+  });
 
   test('the canvas is sharp and undistorted at 2x, also on the GitHub Pages URL', async (t) => {
     for (const url of [GAME_URL, `${PAGES}?e2e`]) {
