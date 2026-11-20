@@ -48,9 +48,13 @@ function serveFromDisk(route) {
   });
 }
 
-async function openPage({ url = GAME_URL, context: contextOptions, storage } = {}) {
+async function openPage({ url = GAME_URL, context: contextOptions, storage, random } = {}) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, ...contextOptions });
   await context.route('**/*', serveFromDisk);
+  if (random !== undefined) {
+    // Pin Math.random (no game code loops on it) to get a predictable pipe gap.
+    await context.addInitScript((value) => { Math.random = () => value; }, random);
+  }
   if (storage) {
     // Seed localStorage once per tab, not again on reloads.
     await context.addInitScript((entries) => {
@@ -67,15 +71,19 @@ async function openPage({ url = GAME_URL, context: contextOptions, storage } = {
   return { context, page, errors };
 }
 
-// Opens a page, runs `body`, fails on any uncaught page error, and saves a screenshot
-// to test-results/ when the test fails.
+// Opens a page, runs `body`, fails as soon as the page throws an uncaught error, and
+// saves a screenshot to test-results/ when the test fails.
 async function withGame(t, options, body) {
   const game = await openPage(options);
+  let rejectOnCrash;
+  const crashed = new Promise((resolve, reject) => { rejectOnCrash = reject; });
+  crashed.catch(() => {});
+  game.page.on('pageerror', (err) => rejectOnCrash(new Error(`uncaught error in the page: ${err.message}`)));
   try {
     if (options.waitForGame !== false) {
       await game.page.waitForFunction(() => window.__dragonE2E !== undefined);
     }
-    await body(game);
+    await Promise.race([body(game), crashed]);
     assert.deepEqual(game.errors, [], 'uncaught errors in the page');
   } catch (err) {
     fs.mkdirSync(ARTIFACTS, { recursive: true });
@@ -91,7 +99,8 @@ async function withGame(t, options, body) {
 const gameState = (page) => page.evaluate(() => window.__dragonE2E.state());
 
 // Flaps toward the next gap centre with the same flap a tap triggers. It runs on every
-// animation frame inside the page, so its decisions are frame-accurate.
+// animation frame inside the page, so its decisions are frame-accurate. A flap lifts the
+// dragon about 95px, so flapping 42px below the centre keeps it inside any gap of 145px+.
 async function setAutopilot(page, enabled) {
   await page.evaluate((on) => {
     window.__e2eAutopilot = on;
@@ -104,7 +113,7 @@ async function setAutopilot(page, enabled) {
           const { bird } = s;
           const next = s.pipes.find((p) => p.x + p.width > bird.x - bird.width / 2);
           const target = next ? next.gapY : (s.viewHeight - s.groundHeight) / 2;
-          if (bird.y > target + 30 && bird.velocity >= 0) window.__dragonE2E.flap();
+          if (bird.y > target + 42 && bird.velocity >= 0) window.__dragonE2E.flap();
         }
       }
       requestAnimationFrame(tick);
@@ -268,11 +277,122 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
     });
   });
 
+  test('Space presses a focused Mute or Shop button', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      await page.focus('#mute-button');
+      await page.keyboard.press('Space');
+      assert.equal((await gameState(page)).muted, true, 'Space on a focused Mute mutes');
+      await page.focus('#shop-button');
+      await page.keyboard.press('Space');
+      assert.ok(await page.isVisible('#coin-shop-modal.visible'), 'Space on a focused Shop opens the shop');
+    });
+  });
+
+  test('after mouse-clicking Mute mid-run, Space pauses and leaves the sound alone', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      await startRun(page, { difficulty: 'Easy' });
+      await page.click('#mute-button');
+      const before = await gameState(page);
+      assert.notEqual(await page.evaluate(() => document.activeElement.id), 'mute-button', 'Mute kept focus after a mouse click');
+      await page.keyboard.press('Space');
+      const after = await gameState(page);
+      assert.equal(after.paused, true, 'Space pauses');
+      assert.equal(after.muted, before.muted, 'Space pressed Mute again');
+    });
+  });
+
+  test('hotkeys do nothing while the shop is open', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      await page.click('#shop-button');
+      assert.ok(await page.isVisible('#coin-shop-modal.visible'));
+      const before = await gameState(page);
+      for (const key of ['KeyM', 'KeyF', 'ArrowUp', 'KeyW']) await page.keyboard.press(key);
+      const after = await gameState(page);
+      assert.equal(after.muted, before.muted, 'M behind the shop toggled mute');
+      assert.equal(after.showFPS, before.showFPS, 'F behind the shop toggled the FPS counter');
+      const runActive = await page.evaluate(() => document.getElementById('game-container').classList.contains('run-active'));
+      assert.equal(runActive, false, 'ArrowUp behind the shop started a run');
+    });
+  });
+
+  test('the shop is a modal dialog: focus moves in and stays in, and Escape closes it', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      // Open it from a locked skin at game over, where Restart and Continue sit behind it.
+      await startRun(page, { difficulty: 'Easy', autopilot: false });
+      await waitForGameOver(page); // score 0, so no name prompt
+      await page.focus('#diamond-skin-btn');
+      await page.keyboard.press('Enter');
+      assert.ok(await page.isVisible('#coin-shop-modal.visible'), 'a locked skin opens the shop');
+      const focusIn = () => page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el || el === document.body) return 'page';
+        return document.getElementById('coin-shop-modal').contains(el) ? 'dialog' : `#${el.id || el.tagName}`;
+      });
+      assert.equal(await focusIn(), 'dialog', 'focus moved into the shop');
+      for (let i = 0; i < 10; i++) {
+        await page.keyboard.press('Tab');
+        const where = await focusIn();
+        assert.ok(where === 'dialog' || where === 'page', `Tab reached ${where} behind the shop`);
+      }
+      await page.keyboard.press('Escape');
+      assert.equal(await page.isVisible('#coin-shop-modal.visible'), false, 'Escape closes the shop');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'diamond-skin-btn', 'focus returns to the skin button');
+      assert.equal((await gameState(page)).gameRunning, false, 'no run started behind the shop');
+    });
+  });
+
+  test('Pause is disabled while there is nothing to pause, and Restart clears the old score', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      await startRun(page, { difficulty: 'Easy' });
+      assert.equal(await page.isDisabled('#pause-button'), false, 'enabled while running');
+      await waitForScore(page, 1);
+      await page.keyboard.press('Space');
+      assert.equal(await page.isDisabled('#pause-button'), false, 'Resume is enabled while paused');
+      await page.keyboard.press('Space');
+      assert.equal(await page.isDisabled('#pause-button'), true, 'disabled during the resume countdown');
+      await page.waitForFunction(() => !window.__dragonE2E.state().paused, null, { timeout: 6_000 });
+      assert.equal(await page.isDisabled('#pause-button'), false, 'enabled again after resuming');
+
+      await setAutopilot(page, false);
+      await page.waitForSelector('#name-input-modal.visible');
+      await page.click('#name-skip-btn');
+      await page.click('#restart-button');
+      assert.equal((await page.textContent('#score-display')).trim(), '0', 'the countdown shows a fresh score');
+      assert.equal(await page.isDisabled('#pause-button'), true, 'disabled during the start countdown');
+    });
+  });
+
+  test('Continue hides the menu controls again and shows Pause', async (t) => {
+    await withGame(t, { storage: { dragonCoins: '100' } }, async ({ page }) => {
+      await startRun(page, { difficulty: 'Easy' });
+      await waitForScore(page, 1);
+      await setAutopilot(page, false);
+      await page.waitForSelector('#name-input-modal.visible');
+      await page.click('#name-skip-btn');
+      await page.click('#continue-button');
+      await setAutopilot(page, true);
+      for (const sel of ['#leaderboard', '#shop-button', '#donate-button', '#bottom-controls']) {
+        assert.equal(await page.isVisible(sel), false, `${sel} is hidden after Continue`);
+      }
+      assert.ok(await page.isVisible('#pause-button'), 'Pause is shown after Continue');
+      assert.equal(await page.isDisabled('#pause-button'), false, 'Pause works after Continue');
+    });
+  });
+
+  test('tapping the "Tap to start" message starts the game', async (t) => {
+    await withGame(t, { context: devices['iPhone 13'] }, async ({ page }) => {
+      const box = await page.locator('#start-message').boundingBox();
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForFunction(() => document.getElementById('game-container').classList.contains('run-active'),
+        null, { timeout: 3_000 });
+    });
+  });
   test('Space after clicking Pause resumes the run', async (t) => {
     await withGame(t, {}, async ({ page }) => {
       await startRun(page, { difficulty: 'Easy' });
       await page.click('#pause-button');
       assert.equal((await gameState(page)).paused, true);
+      assert.notEqual(await page.evaluate(() => document.activeElement.id), 'pause-button', 'Pause kept focus after a mouse click');
       await page.keyboard.press('Space');
       await page.waitForFunction(() => !window.__dragonE2E.state().paused, null, { timeout: 6_000 });
       assert.ok((await gameState(page)).gameRunning);
@@ -302,7 +422,7 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
     });
   });
 
-  for (const deviceName of ['iPhone 13', 'iPhone SE (3rd gen)', 'Galaxy S9+']) {
+  for (const deviceName of ['iPhone 13', 'iPhone SE (3rd gen)', 'Galaxy S9+', 'iPhone 13 landscape', 'iPad (gen 11)']) {
     test(`${deviceName}: menu, run and game over layouts have no overlaps`, async (t) => {
       const leaderboard = JSON.stringify(Array.from({ length: 10 }, (_, i) => ({ name: `Player ${i + 1}`, score: 60 - i * 5 })));
       const options = { context: devices[deviceName], storage: { leaderboard, dragonCoins: '1250', highScore: '60' } };
@@ -382,6 +502,109 @@ describe('Dragon Flight smoke tests', { concurrency: 3 }, () => {
       const { pixel, expected, camera } = await handle.jsonValue();
       const matches = pixel.every((value, i) => Math.abs(value - expected[i]) <= 6);
       assert.ok(matches, `top pixel ${pixel} should be the pipe colour ${expected} (camera ${camera.toFixed(1)}px)`);
+    });
+  });
+
+  test('bottom pipes reach the ground while the camera follows a low dragon', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      await startRun(page, { difficulty: 'Medium', autopilot: false });
+      // Hover low, so the camera shifts the playfield up, before the first pipe arrives.
+      await page.evaluate(() => {
+        const tick = () => {
+          const s = window.__dragonE2E.state();
+          if (s.bird.y > s.viewHeight - s.groundHeight - 120 && s.bird.velocity >= 0) window.__dragonE2E.flap();
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      const handle = await page.waitForFunction(() => {
+        const s = window.__dragonE2E.state();
+        if (s.cameraOffsetY > -6) return false; // shifted up: a short bottom pipe would end above the ground
+        const pipe = s.pipes.find((p) => p.x > s.bird.x + 200 && p.x + p.width < s.viewWidth);
+        if (!pipe) return false;
+        const ctx = document.getElementById('game-canvas').getContext('2d');
+        const y = Math.round((s.viewHeight - s.groundHeight + s.cameraOffsetY / 2) * s.pixelRatio);
+        const hex = window.DragonRules.getPipeColor(s.score).body;
+        const expected = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+        let matches = 0;
+        let samples = 0;
+        // Sample across the pipe: grass blades poke up to 13px above the ground line.
+        for (let x = pipe.x + 5; x < pipe.x + pipe.width - 5; x += 2) {
+          const px = ctx.getImageData(Math.round(x * s.pixelRatio), y, 1, 1).data;
+          samples++;
+          if ([0, 1, 2].every((i) => Math.abs(px[i] - expected[i]) <= 6)) matches++;
+        }
+        return { matches, samples, camera: s.cameraOffsetY };
+      }, null, { timeout: 45_000, polling: 'raf' });
+      const { matches, samples, camera } = await handle.jsonValue();
+      assert.ok(matches / samples >= 0.5,
+        `${matches}/${samples} pixels just above the ground are pipe-coloured (camera ${camera.toFixed(1)}px)`);
+    });
+  });
+
+  test('the dragon can reach the visible top of the screen', async (t) => {
+    await withGame(t, {}, async ({ page }) => {
+      await startRun(page, { difficulty: 'Easy', autopilot: false });
+      await page.evaluate(() => {
+        const tick = () => { window.__dragonE2E.flap(); requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+      });
+      const handle = await page.waitForFunction(() => {
+        const s = window.__dragonE2E.state();
+        return s.cameraOffsetY > 35 ? s : false; // the dragon has been pressed against the top for a while
+      }, null, { timeout: 5_000, polling: 'raf' });
+      const s = await handle.jsonValue();
+      const topOnScreen = s.bird.y - s.bird.height / 2 + s.cameraOffsetY;
+      assert.ok(Math.abs(topOnScreen) < 1, `dragon top on screen at ${topOnScreen.toFixed(1)}px (camera ${s.cameraOffsetY.toFixed(1)}px)`);
+    });
+  });
+
+  test('the canvas buffer is capped at 2x on a 3x screen', async (t) => {
+    await withGame(t, { context: { viewport: { width: 400, height: 700 }, deviceScaleFactor: 3 } }, async ({ page }) => {
+      const m = await page.evaluate(() => {
+        const canvas = document.getElementById('game-canvas');
+        const box = canvas.getBoundingClientRect();
+        return { width: box.width, height: box.height, bufferWidth: canvas.width, bufferHeight: canvas.height };
+      });
+      assert.equal(m.bufferWidth, Math.round(m.width * 2), 'buffer width is 2x the CSS width');
+      assert.equal(m.bufferHeight, Math.round(m.height * 2), 'buffer height is 2x the CSS height');
+    });
+  });
+
+  test('pipe gaps use the whole phone play area and stay on screen', async (t) => {
+    const centres = [];
+    for (const random of [0, 0.999999]) {
+      await withGame(t, { context: devices['iPhone 13'], random }, async ({ page }) => {
+        await startRun(page, { difficulty: 'Medium', tap: true });
+        const handle = await page.waitForFunction(() => {
+          const s = window.__dragonE2E.state();
+          return s.pipes.length > 0 ? s : false;
+        }, null, { timeout: 10_000 });
+        const s = await handle.jsonValue();
+        const playHeight = s.viewHeight - s.groundHeight;
+        const { gapY } = s.pipes[0];
+        assert.ok(gapY - s.pipeGap / 2 >= 0 && gapY + s.pipeGap / 2 <= playHeight,
+          `gap centred at ${gapY} is fully on screen (play area ${playHeight}px)`);
+        centres.push(gapY);
+      });
+    }
+    const spread = centres[1] - centres[0];
+    assert.ok(spread >= 150, `gap centres span ${spread.toFixed(1)}px on a 664px-tall phone (${centres.map((c) => c.toFixed(1))})`);
+  });
+
+  test('on a landscape phone, Easy gaps fit the sky so pipes stay visible', async (t) => {
+    await withGame(t, { context: devices['iPhone 13 landscape'] }, async ({ page }) => {
+      await startRun(page, { difficulty: 'Easy', tap: true });
+      const handle = await page.waitForFunction(() => {
+        const s = window.__dragonE2E.state();
+        return s.pipes.length > 0 ? s : false;
+      }, null, { timeout: 10_000 });
+      const s = await handle.jsonValue();
+      const playHeight = s.viewHeight - s.groundHeight;
+      const { gapY } = s.pipes[0];
+      assert.ok(s.pipeGap < 250 && s.pipeGap >= 160, `Easy gap fitted to the ${playHeight}px sky (got ${s.pipeGap})`);
+      assert.ok(gapY - s.pipeGap / 2 >= 20, `top pipe shows (ends at ${gapY - s.pipeGap / 2})`);
+      assert.ok(gapY + s.pipeGap / 2 <= playHeight - 20, `bottom pipe shows (starts at ${gapY + s.pipeGap / 2})`);
     });
   });
 

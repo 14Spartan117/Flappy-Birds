@@ -25,6 +25,14 @@
     return Math.floor(newScore / step) > Math.floor(previousScore / step);
   }
 
+  // On very short play areas (phones in landscape) a difficulty's gap can be as tall
+  // as the whole sky, so no pipe would be visible. Shrink the gap until at least
+  // `minVisiblePipe` of pipe shows above and below it, but never below `minGap`
+  // (still flyable with the dragon's 95px flap). Gaps are never made larger.
+  function fitGapToPlayArea(pipeGap, playHeight, { minVisiblePipe = 40, minGap = 160 } = {}) {
+    return Math.min(pipeGap, Math.max(minGap, playHeight - 2 * minVisiblePipe));
+  }
+
   // Range for a pipe gap's centre inside the play area (the sky above the ground).
   // The whole gap plus `edgeMargin` of pipe stays on screen; on short screens the
   // margin shrinks instead of the range inverting, and on tall screens the spread
@@ -82,6 +90,7 @@
     DIFFICULTY_STEP,
     computeProgressiveDifficulty,
     crossedScoreStep,
+    fitGapToPlayArea,
     getPipeGapRange,
     settleRunScore,
     getComboMultiplier,

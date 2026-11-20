@@ -310,6 +310,10 @@
       outline: 2px solid #fff;
       background: rgba(0,0,0,0.7);
     }
+    #pause-button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
     /* 5. Name input modal */
     #name-input-modal {
       position: absolute;
@@ -553,8 +557,8 @@
       #mode-selection h2, #difficulty-selection h2, #skin-selection h2 { margin: 0 0 2px; }
       .mode-btn, .difficulty-btn, .skin-btn { padding: 4px 6px; font-size: 11px; }
     }
-    /* Small phones (4-inch): a shorter leaderboard lets the game over panel move up */
-    @media (max-width: 560px) and (max-height: 600px) {
+    /* Small phones: a shorter leaderboard lets the game over panel move up */
+    @media (max-width: 560px) and (max-height: 640px) {
       #leaderboard-list > div:nth-child(n+4) { display: none; }
       #game-over { top: calc(106px + var(--safe-top)); }
     }
@@ -571,6 +575,24 @@
        so they don't cover the dragon or the start message. */
     @media (max-width: 560px) and (max-height: 760px), (max-height: 500px) {
       #bottom-controls { bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+    }
+    /* Portrait tablets: the start message and game over panel clear the full leaderboard */
+    @media (min-width: 561px) and (max-width: 820px) and (min-height: 800px) {
+      #start-message { top: 36%; }
+      #game-over { top: calc(250px + var(--safe-top)); transform: translateX(-50%); }
+    }
+    /* Phones in landscape: a 3-row leaderboard, the start message and game over panel
+       placed clear of the HUD, and compact pickers, so nothing covers anything else. */
+    @media (max-height: 500px) {
+      #leaderboard { font-size: 12px; padding: 6px 8px; max-width: 150px; }
+      #leaderboard-list > div:nth-child(n+4) { display: none; }
+      #start-message { top: calc(106px + var(--safe-top)); transform: translateX(-50%); font-size: 18px; padding: 8px 12px; }
+      #start-high-score { font-size: 14px; margin-top: 2px; }
+      #game-over { top: calc(6px + var(--safe-top)); transform: translateX(-50%); padding: 8px 12px; }
+      #game-over button { margin-top: 3px; }
+      #bottom-controls { gap: 2px 12px; padding: 3px 8px; }
+      #mode-selection h2, #difficulty-selection h2, #skin-selection h2 { font-size: 11px; margin: 0 0 2px; }
+      .mode-btn, .difficulty-btn, .skin-btn { padding: 3px 7px; font-size: 11px; }
     }
   </style>
 </head>
@@ -657,9 +679,9 @@
       <button id="remove-ads-btn" aria-label="Remove ads for coins">Remove Ads (500 🪙)</button>
     </div>
     <!-- Coin Shop Modal -->
-    <div id="coin-shop-modal">
+    <div id="coin-shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-title">
       <div class="shop-content">
-        <h2>🛒 Coin Shop</h2>
+        <h2 id="shop-title">🛒 Coin Shop</h2>
         <p id="shop-coin-balance">Your Coins: 🪙 0</p>
         <div class="shop-item">
           <div>
@@ -769,7 +791,7 @@
       }
 
       document.addEventListener('DOMContentLoaded', () => {
-        const { computeProgressiveDifficulty, crossedScoreStep, getPipeGapRange, settleRunScore, getComboMultiplier, getPipeColor, getMedal } = window.DragonRules;
+        const { computeProgressiveDifficulty, crossedScoreStep, fitGapToPlayArea, getPipeGapRange, settleRunScore, getComboMultiplier, getPipeColor, getMedal } = window.DragonRules;
         const { safeLoadJSON, safeLoadNumber, loadSettings, saveSettings, safeSetJSON } = window.DragonStorage;
         const { getDayNightBlend, getSkyColor, getCelestialAlpha, drawTwinklingStars, updateParallaxOffsets, drawParallaxLayers, updateAndDrawClouds } = window.DragonRenderBackground;
         const { drawPipePair, drawPipeWarningOverlay, computeWarningAlpha } = window.DragonRenderPipes;
@@ -847,6 +869,17 @@
       let birdInitialized = false;
       window.addEventListener('resize', resizeCanvas);
       resizeCanvas();
+      // The pixel ratio can change without a resize (e.g. the window moves to a monitor
+      // with a different scale): re-size the buffer then too, re-arming for the new ratio.
+      function watchPixelRatio() {
+        const query = window.matchMedia && window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+        if (!query || !query.addEventListener) return;
+        query.addEventListener('change', () => {
+          resizeCanvas();
+          watchPixelRatio();
+        }, { once: true });
+      }
+      watchPixelRatio();
   
       // Named constants
       const GROUND_HEIGHT = 100;
@@ -1007,6 +1040,8 @@
       function renderPauseButton() {
         pauseButton.innerText = paused ? 'Resume' : 'Pause';
         pauseButton.setAttribute('aria-label', paused ? 'Resume game' : 'Pause game');
+        // Nothing to pause during the start countdown, and the resume countdown is already running.
+        pauseButton.disabled = !gameRunning || resumeCountdownActive;
       }
 
       function setGameState(nextState, force = false) {
@@ -1413,6 +1448,8 @@
       function updateGameParameters() {
         pipeSpeed = (gameMode === "Challenge" ? 4.5 : 3);
         pipeGap = (gameMode === "Challenge" ? selectedDifficulty.pipeGap * 0.8 : selectedDifficulty.pipeGap);
+        // On very short screens (phones in landscape) a gap can be taller than the sky.
+        pipeGap = fitGapToPlayArea(pipeGap, viewHeight - GROUND_HEIGHT);
         pipeSpawnRate = (gameMode === "Challenge" ? selectedDifficulty.pipeSpawnRate * 0.8 : selectedDifficulty.pipeSpawnRate);
         basePipeSpeed = pipeSpeed;
         basePipeGap = pipeGap;
@@ -1800,10 +1837,15 @@
   
       function startCountdown() {
         if (countdownActive) return;
+        closeShop({ restoreFocus: false });
         setGameState(GAME_STATES.COUNTDOWN);
         setRunActive(true);
         countdownActive = true;
         resumeCountdownActive = false;
+        // The score strip shows during the countdown, so clear the previous run's score now.
+        scoreDisplay.innerText = 0;
+        comboDisplay.innerText = '';
+        renderPauseButton();
         gameOverMessage.style.display = 'none';
         nameInputModal.classList.remove('visible');
         document.getElementById('difficulty-selection').style.display = 'none';
@@ -1964,6 +2006,7 @@
       function resumeGameWithCountdown() {
         if (!paused || resumeCountdownActive) return;
         resumeCountdownActive = true;
+        renderPauseButton();
         setGameState(GAME_STATES.COUNTDOWN);
         let countdown = COUNTDOWN_SECONDS;
         startMessage.style.display = 'block';
@@ -2016,6 +2059,7 @@
         if (continueUsed || coins < CONTINUE_COST) return;
         if (!spendCoins(CONTINUE_COST)) return;
         continueUsed = true;
+        closeShop({ restoreFocus: false });
         setGameState(GAME_STATES.RUNNING);
         gameOverMessage.style.display = 'none';
         nameInputModal.classList.remove('visible');
@@ -2032,6 +2076,7 @@
         pipes.length = 0;
         lastPipeTime = Date.now();
         lastFrameTime = performance.now();
+        renderPauseButton();
       });
 
       // --- Monetization: Rewarded ad (simulated) ---
@@ -2043,20 +2088,43 @@
         continueButton.disabled = coins < CONTINUE_COST || continueUsed;
       });
 
-      // --- Monetization: Coin shop ---
-      shopButton.addEventListener('click', () => {
+      // --- Monetization: Coin shop (a modal dialog) ---
+      // While it is open, focus moves into it and everything behind it is inert, so
+      // keyboard users can't reach (and start a run with) controls hidden under it.
+      const shopCloseBtn = document.getElementById('shop-close-btn');
+      let shopReturnFocus = null;
+
+      function setShopBackgroundInert(inert) {
+        Array.from(gameContainer.children).forEach((el) => {
+          if (el !== coinShopModal) el.inert = inert;
+        });
+      }
+
+      function openShop() {
+        if (coinShopModal.classList.contains('visible')) return;
         setGameState(GAME_STATES.SHOP);
         updateCoinDisplay();
         updateShopButtons();
+        shopReturnFocus = document.activeElement;
         coinShopModal.classList.add('visible');
-      });
+        setShopBackgroundInert(true);
+        const firstButton = coinShopModal.querySelector('button:not([disabled])');
+        if (firstButton) firstButton.focus();
+      }
 
-      document.getElementById('shop-close-btn').addEventListener('click', () => {
+      function closeShop({ restoreFocus = true } = {}) {
+        if (!coinShopModal.classList.contains('visible')) return;
         const fallbackState = gameRunning ? GAME_STATES.RUNNING : (gameStarted ? GAME_STATES.GAME_OVER : GAME_STATES.MENU);
         const restoreState = canTransitionState(gameState, previousGameState) ? previousGameState : fallbackState;
         setGameState(restoreState, true);
         coinShopModal.classList.remove('visible');
-      });
+        setShopBackgroundInert(false);
+        if (restoreFocus && shopReturnFocus && shopReturnFocus.isConnected) shopReturnFocus.focus();
+        shopReturnFocus = null;
+      }
+
+      shopButton.addEventListener('click', openShop);
+      shopCloseBtn.addEventListener('click', () => closeShop());
 
       function updateShopButtons() {
         const buyDiamondBtn = document.getElementById('buy-diamond-btn');
@@ -2118,9 +2186,11 @@
         togglePauseResume();
       });
 
-      // A mouse or touch click shouldn't leave focus on a HUD button, or a later Space
-      // press (the pause hotkey) could activate it too. Keyboard activation keeps focus.
-      [pauseButton, muteButton, shopButton].forEach((button) => {
+      // Space on a focused button presses it (for keyboard users, see the keydown handler),
+      // so a mouse or touch click must not leave focus on a button that stays on screen
+      // during a run; otherwise Space would press it again instead of pausing.
+      // Keyboard activation (e.detail === 0) keeps focus.
+      [pauseButton, muteButton, shopButton, removeAdsBtn].forEach((button) => {
         button.addEventListener('click', (e) => {
           if (e.detail > 0) button.blur();
         });
@@ -2138,7 +2208,13 @@
       }
 
       document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && coinShopModal.classList.contains('visible')) {
+          closeShop();
+          return;
+        }
         if (isTextEntryTarget(e.target) || isModalOpen()) return;
+        // Space on a focused button or link activates that control natively.
+        if (e.code === 'Space' && e.target.closest && e.target.closest('button, a[href]')) return;
         if (e.code === 'Space') {
           e.preventDefault();
           togglePauseResume();
@@ -2191,8 +2267,7 @@
             // Revert selection to current skin
             document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('selected'));
             document.getElementById(`${selectedSkin}-skin-btn`).classList.add('selected');
-            coinShopModal.classList.add('visible');
-            updateShopButtons();
+            openShop();
             return;
           }
           selectedSkin = value;

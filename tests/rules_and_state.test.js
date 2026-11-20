@@ -6,6 +6,7 @@ const {
   DIFFICULTY_STEP,
   computeProgressiveDifficulty,
   crossedScoreStep,
+  fitGapToPlayArea,
   getPipeGapRange,
   settleRunScore,
   getComboMultiplier,
@@ -89,6 +90,19 @@ const { computeGroundOffset } = require('../src/render/ground.js');
 
   const tiny = getPipeGapRange(120, 200);
   assert.strictEqual(tiny.min, tiny.max);
+}
+
+// Gap fitting: only very short play areas (phones in landscape) shrink the gap
+{
+  assert.strictEqual(fitGapToPlayArea(250, 564), 250, 'portrait phone keeps Easy');
+  assert.strictEqual(fitGapToPlayArea(200, 800), 200, 'desktop keeps Medium');
+  assert.strictEqual(fitGapToPlayArea(150, 242), 150, 'never makes a gap larger');
+  const landscapeEasy = fitGapToPlayArea(250, 242); // 342px-tall landscape phone
+  assert.strictEqual(landscapeEasy, 162);
+  assert(242 - landscapeEasy >= 80, 'at least 40px of pipe above and below');
+  assert.strictEqual(fitGapToPlayArea(250, 150), 160, 'never below a flyable gap');
+  const range = getPipeGapRange(242, landscapeEasy);
+  assert(range.max > range.min, 'fitted gap still varies in height');
 }
 
 // Run settlement: Continue keeps the score, so each point is paid out once
