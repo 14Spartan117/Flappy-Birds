@@ -58,7 +58,26 @@ A fun, challenging Flappy Bird-style browser game where you fly a dragon through
 
 ## Testing
 
-A comprehensive test suite is included in `tests.html`. Open it in any browser — no server required:
+The game itself needs no build step. The checks below are dev tooling and need Node.js 20.19+ or 22.13+:
+
+```bash
+npm ci                            # install ESLint and Playwright
+npm run lint                      # ESLint, including the inline game script in index.html
+npm test                          # unit tests for the shared modules in src/
+npx playwright install chromium   # once: download the browser for the smoke tests
+npm run test:e2e                  # plays the real game in headless Chromium
+```
+
+`npm run check` runs all three. CI runs them on every pull request.
+
+The smoke tests (`tests/e2e/smoke.test.js`) load `index.html?e2e`, which exposes a small read-only test hook (`window.__dragonE2E`), and fly the dragon with an autopilot. They check:
+- the game keeps running past the difficulty steps at 10 and 30 points;
+- Continue, keyboard controls and the leaderboard name field;
+- phone layouts, canvas sharpness, and the GitHub Pages URL.
+
+If a smoke test fails, a screenshot is saved to `test-results/`.
+
+The original browser suite is still in `tests.html` (the smoke tests run it too). Open it in any browser, no server required:
 
 ```bash
 open tests.html        # macOS
